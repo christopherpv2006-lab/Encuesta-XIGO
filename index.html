@@ -39,41 +39,78 @@
 
         const surveyData = [
             {
-                section: "Filtro Inicial",
-                title: "¿En los últimos 30 días, has comprado comida preparada para consumir fuera de casa?",
-                options: ["Sí, lo he comprado", "No, pero lo consideraría", "No, no me interesa"],
+                section: "Bloque 0 - Filtro",
+                title: "¿En los últimos 30 días, has comprado comida preparada para consumir fuera de casa, trabajo o universidad?",
+                options: ["Sí, lo he comprado", "No, pero lo consideraría si fuera conveniente", "No, no me interesa"],
                 type: "single",
                 terminateIf: "No, no me interesa"
             },
             {
-                section: "Estilo de Vida",
+                section: "Bloque 1 - Contexto",
                 title: "¿Cuál describe mejor tu situación actual?",
-                options: ["Trabajo fuera de casa", "Trabajo desde casa", "Trabajo mixto", "Estudiante"],
+                options: ["Trabajo fuera de casa", "Trabajo desde casa / Online", "Trabajo mixto (Híbrido)", "Estudiante / No trabajo actualmente"],
                 type: "single"
             },
             {
-                section: "Momentos",
-                title: "¿En qué situaciones elegirías comida lista para llevar? (Elige varias)",
-                options: ["Poco tiempo para almorzar", "Reuniones de trabajo", "No alcancé a cocinar", "Comer en la oficina", "Entre traslados"],
+                section: "Bloque 1 - Frecuencia",
+                title: "¿Con qué frecuencia almuerzas fuera de casa en una semana normal?",
+                options: ["0 veces", "1-2 veces", "3-4 veces", "5 o más veces"],
+                type: "single"
+            },
+            {
+                section: "Bloque 1 - Experiencia",
+                title: "¿Has comprado alguna vez comida preparada para consumir después (Refrigerada o Empacada)?",
+                options: ["Sí, regularmente", "Sí, algunas veces", "No, pero me llama la atención", "No, no me interesa"],
+                type: "single"
+            },
+            {
+                section: "Bloque 1 - Momentos",
+                title: "¿En qué situaciones elegirías comida lista para llevar? (Elige todas las que apliquen)",
+                options: ["Poco tiempo para almorzar", "Reuniones de trabajo o estudio continuo", "No alcancé a cocinar en casa", "Comer en la oficina / escritorio", "Entre traslados de un sitio a otro", "Para llevar y comer en casa"],
                 type: "multiple"
             },
             {
-                section: "Preferencias",
-                title: "¿Qué tipo de comida te genera más apetito en formato Grab & Go? (Máx 3)",
-                options: ["Ecuatoriana", "Casera ligera", "Bowls balanceados", "Ensaladas", "Sopas/Cremas", "Snacks salados"],
+                section: "Bloque 1 - Preferencias",
+                title: "¿Qué tipo de comida te genera más apetito en formato Grab & Go? (Elige hasta 3)",
+                options: ["Ecuatoriana", "Casera ligera", "Bowls balanceados", "Ensaladas", "Sopas / Cremas", "Snacks salados"],
                 type: "multiple",
                 max: 3
             },
             {
-                section: "Precios",
+                section: "Bloque 2 - Precios",
                 title: "¿Qué precio te parece razonable para un almuerzo fresco y de calidad?",
-                options: ["$5.99 - $7.99", "$7.99 - $9.99", "$9.99 - $11.99", "$12.00+"],
+                options: ["Menos de $5.00", "$5.99 - $7.99", "$7.99 - $9.99", "$9.99 - $11.99", "$12.00 o más"],
                 type: "single"
             },
             {
-                section: "Perfil",
-                title: "¿En qué zona de Guayaquil realizas tus actividades?",
-                options: ["Norte", "Centro", "Sur", "Samborondón", "Vía a la Costa"],
+                section: "Bloque 2 - Elasticidad",
+                title: "Si un almuerzo de $5.99 sube a $7.99 por mejores ingredientes, ¿qué harías?",
+                options: ["Lo seguiría comprando igual", "Lo compraría con menos frecuencia", "Buscaría otra opción más barata", "Dejaría de comprarlo definitivamente"],
+                type: "single"
+            },
+            {
+                section: "Bloque 3 - Bebidas",
+                title: "¿Cuál de estas opciones de bebida te resultaría más atractiva? (Elige 2)",
+                options: ["Agua natural / saborizada", "Jugo natural prensado", "Té frío / Infusión", "Café latte / Macha", "Bebida funcional (Energía/Salud)", "Bebida refrescante clásica"],
+                type: "multiple",
+                max: 2
+            },
+            {
+                section: "Bloque 3 - Lácteos",
+                title: "¿Qué tipo de leche prefieres en tus bebidas?",
+                options: ["Leche entera / Semidescremada", "Deslactosada", "Almendra", "Avena", "Soya", "No consumo leche"],
+                type: "single"
+            },
+            {
+                section: "Bloque 4 - Perfil",
+                title: "¿En qué zona de Guayaquil realizas la mayoría de tus actividades?",
+                options: ["Norte", "Centro", "Sur", "Samborondón", "Vía a la Costa", "Durán"],
+                type: "single"
+            },
+            {
+                section: "Bloque 4 - Perfil",
+                title: "Rango de edad",
+                options: ["18-24 años", "25-34 años", "35-44 años", "45-54 años", "55 años o más"],
                 type: "single"
             }
         ];
@@ -135,23 +172,26 @@
             };
 
             const submitEmail = () => {
-                if (!email.includes('@')) return alert("Email no válido");
+                if (!email.includes('@')) return alert("Por favor ingresa un email válido");
                 setIsLoading(true);
                 setTimeout(() => {
                     setIsLoading(false);
                     setStep('success');
-                }, 1000);
+                }, 1200);
             };
 
             if (step === 'admin') {
                 return (
                     <div className="p-8 bg-white min-h-screen">
                         <div className="flex justify-between items-center mb-8 border-b pb-4">
-                            <h1 className="text-2xl font-bold text-xigo uppercase">XIGO Admin</h1>
-                            <button onClick={() => setStep('survey')} className="bg-gray-200 px-4 py-2 rounded-lg font-bold">Cerrar</button>
+                            <h1 className="text-2xl font-bold text-xigo uppercase tracking-tighter">Panel de Resultados XIGO</h1>
+                            <button onClick={() => setStep('survey')} className="bg-gray-100 px-4 py-2 rounded-xl font-bold text-gray-500 hover:bg-gray-200">Cerrar</button>
                         </div>
-                        <div className="bg-green-50 p-6 rounded-2xl text-xigo font-bold border border-green-100">
-                            Panel de Datos habilitado. Aquí se mostrarán los correos registrados.
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-green-50 p-6 rounded-3xl text-xigo font-bold border border-green-100">
+                                <p className="text-xs uppercase opacity-60 mb-1">Estado de la Base de Datos</p>
+                                <p className="text-xl">Listo para recibir registros</p>
+                            </div>
                         </div>
                     </div>
                 );
@@ -159,22 +199,22 @@
 
             return (
                 <div className="min-h-screen flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col min-h-[600px] border border-gray-100">
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col min-h-[650px] border border-gray-100">
                         
-                        <div onClick={handleAdminAccess} className="bg-xigo p-8 text-center cursor-pointer select-none active:bg-opacity-95 transition-all">
-                            <h1 className="text-white font-black text-3xl tracking-[0.2em]">XIGO</h1>
+                        <div onClick={handleAdminAccess} className="bg-xigo p-8 text-center cursor-pointer select-none active:scale-[0.99] transition-all">
+                            <h1 className="text-white font-black text-3xl tracking-[0.2em] mb-1">XIGO</h1>
                             <p className="text-green-100 text-[10px] uppercase tracking-widest font-bold">Bebiendo y Comiendo • Grab & Go</p>
                         </div>
 
                         <div className="p-8 sm:p-10 flex-grow flex flex-col">
                             {step === 'survey' && (
-                                <div className="fade-in flex-grow">
+                                <div className="fade-in flex-grow flex flex-col">
                                     <div className="w-full bg-gray-100 h-1.5 rounded-full mb-8 overflow-hidden">
                                         <div className="bg-xigo h-full transition-all duration-700" style={{ width: `${(currentIdx / surveyData.length) * 100}%` }}></div>
                                     </div>
                                     <p className="text-xigo font-bold text-xs uppercase mb-2 opacity-70 tracking-widest">{surveyData[currentIdx].section}</p>
                                     <h2 className="text-xl sm:text-2xl font-extrabold text-gray-800 leading-tight mb-6">{surveyData[currentIdx].title}</h2>
-                                    <div className="space-y-3">
+                                    <div className="space-y-3 flex-grow">
                                         {surveyData[currentIdx].options.map((opt, i) => (
                                             <button 
                                                 key={i} 
@@ -191,6 +231,7 @@
                                             Continuar
                                         </button>
                                     )}
+                                    <p className="text-center text-[10px] text-gray-300 mt-6 font-bold uppercase tracking-widest">Pregunta {currentIdx + 1} de {surveyData.length}</p>
                                 </div>
                             )}
 
@@ -198,10 +239,10 @@
                                 <div className="fade-in text-center py-6 flex-grow flex flex-col justify-center">
                                     <div className="text-5xl mb-6">🎁</div>
                                     <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase italic">¡CASI LISTO!</h2>
-                                    <p className="text-gray-500 text-sm mb-8 leading-relaxed px-4 italic font-medium">Déjanos tu correo para enviarte el código de descuento del <strong>15%</strong> y la invitación a nuestra apertura.</p>
+                                    <p className="text-gray-500 text-sm mb-8 leading-relaxed px-4 italic font-medium">Déjanos tu correo para enviarte el código de descuento del <strong>15%</strong> para nuestra apertura.</p>
                                     <input 
                                         type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com"
-                                        className="w-full p-5 rounded-2xl border-2 border-gray-100 focus:border-xigo outline-none mb-4 text-center font-bold text-gray-700 placeholder:text-gray-300"
+                                        className="w-full p-5 rounded-2xl border-2 border-gray-100 focus:border-xigo outline-none mb-4 text-center font-bold text-gray-700 placeholder:text-gray-300 shadow-inner"
                                     />
                                     <button onClick={submitEmail} disabled={isLoading} className="w-full bg-xigo text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest disabled:opacity-50 active:scale-[0.98] transition-all">
                                         {isLoading ? "PROCESANDO..." : "Obtener mi Regalo"}
@@ -213,7 +254,7 @@
                                 <div className="fade-in text-center py-10 flex-grow flex flex-col justify-center">
                                     <div className="w-20 h-20 bg-green-100 text-xigo rounded-full flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">✓</div>
                                     <h2 onClick={handleAdminAccess} className="text-3xl font-black text-xigo mb-4 uppercase italic cursor-pointer">¡HECHO!</h2>
-                                    <p className="text-gray-600 mb-8 font-medium italic px-2">Hemos registrado tu participación. El código <strong>XIGO15</strong> llegará pronto a tu bandeja.</p>
+                                    <p className="text-gray-600 mb-8 font-medium italic px-2">Hemos registrado tus respuestas. El código <strong>XIGO15</strong> llegará pronto a tu correo.</p>
                                     <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] text-gray-400 text-[10px] uppercase font-black tracking-[0.2em]">
                                         REVISA TU BANDEJA DE ENTRADA
                                     </div>
@@ -223,7 +264,7 @@
                             {step === 'terminated' && (
                                 <div className="fade-in text-center py-10 flex-grow flex flex-col justify-center">
                                     <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase italic">¡Gracias!</h2>
-                                    <p className="text-gray-500 text-sm mb-10 leading-relaxed italic font-medium">Apreciamos tu honestidad. Aunque no califiques hoy, tus respuestas son muy valiosas para nosotros.</p>
+                                    <p className="text-gray-500 text-sm mb-10 leading-relaxed italic font-medium">Apreciamos tu honestidad. Aunque no califiques para el cupón hoy, tus respuestas nos ayudan a mejorar.</p>
                                     <button onClick={() => window.location.reload()} className="text-xigo font-bold underline decoration-2 underline-offset-4">Volver al inicio</button>
                                 </div>
                             )}
