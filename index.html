@@ -3,143 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XIGO - Encuesta Profesional</title>
-    <!-- Carga de Tailwind CSS para el diseño -->
+    <title>XIGO - Encuesta Premium</title>
+    <!-- Tailwind para el diseño -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Carga de React y Babel para ejecutar el código JSX -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- React para la lógica -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <script>
-        // Configuración de colores personalizados para XIGO
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         xigo: '#2D5A27',
+                        'xigo-light': '#f0fdf4',
                     }
                 }
             }
         }
     </script>
     <style>
-        .fade-in { animation: fadeIn 0.5s ease-out; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        body { background-color: #f9fafb; }
     </style>
 </head>
-<body class="bg-gray-50">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
         // --- CONFIGURACIÓN DE SEGURIDAD ---
-        const ADMIN_PASSWORD = "XIGO2026";
-
-        // Mock de Firebase para previsualización (el entorno real inyectará las credenciales)
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'xigo-survey-default';
+        const ADMIN_PASSWORD = "XIGO2026"; 
 
         const surveyData = [
             {
-                section: "Bloque 0 - Filtro",
-                title: "¿En los últimos 30 días, has comprado comida preparada para consumir fuera de casa, trabajo o universidad?",
-                options: ["Sí, lo he comprado", "No, pero lo consideraría si fuera conveniente", "No, no me interesa"],
+                section: "Filtro Inicial",
+                title: "¿En los últimos 30 días, has comprado comida preparada para consumir fuera de casa?",
+                options: ["Sí, lo he comprado", "No, pero lo consideraría", "No, no me interesa"],
                 type: "single",
                 terminateIf: "No, no me interesa"
             },
             {
-                section: "Bloque 1 - Estilo de Vida",
+                section: "Estilo de Vida",
                 title: "¿Cuál describe mejor tu situación actual?",
-                options: ["Trabajo fuera de casa", "Trabajo desde casa/online", "Trabajo mixto", "Estudiante / No trabajo"],
+                options: ["Trabajo fuera de casa", "Trabajo desde casa", "Trabajo mixto", "Estudiante"],
                 type: "single"
             },
             {
-                section: "Bloque 1 - Comida",
-                title: "¿Has comprado alguna vez comida preparada para consumir después (Refrigerada/Empacada)?",
-                options: ["Sí, regularmente", "Sí, algunas veces", "No, pero me llama la atención", "No, no me interesa"],
-                type: "single"
-            },
-            {
-                section: "Bloque 1 - Momentos",
+                section: "Momentos",
                 title: "¿En qué situaciones elegirías comida lista para llevar? (Puedes elegir varias)",
-                options: ["Poco tiempo para almorzar", "Reuniones de trabajo", "No alcancé a cocinar", "Comer en la oficina", "Entre traslados", "Para llevar a casa"],
+                options: ["Poco tiempo para almorzar", "Reuniones de trabajo", "No alcancé a cocinar", "Comer en la oficina", "Entre traslados"],
                 type: "multiple"
             },
             {
-                section: "Bloque 1 - Preferencias",
+                section: "Preferencias",
                 title: "¿Qué tipo de comida te genera más apetito en formato Grab & Go? (Elige hasta 3)",
                 options: ["Ecuatoriana", "Casera ligera", "Bowls balanceados", "Ensaladas", "Sopas/Cremas", "Snacks salados"],
                 type: "multiple",
                 max: 3
             },
             {
-                section: "Bloque 2 - Precios",
+                section: "Precios",
                 title: "¿Qué precio te parece razonable para un almuerzo fresco y de calidad?",
                 options: ["$5.99 - $7.99", "$7.99 - $9.99", "$9.99 - $11.99", "$12.00+"],
                 type: "single"
             },
             {
-                section: "Bloque 2 - Elasticidad",
-                title: "Si un almuerzo de $5.99 sube a $7.99 por costos de ingredientes, ¿qué harías?",
-                options: ["Lo seguiría comprando igual", "Lo compraría con menos frecuencia", "Buscaría otra opción", "Dejaría de comprarlo"],
-                type: "single"
-            },
-            {
-                section: "Bloque 3 - Bebidas",
-                title: "¿Cuál de estas opciones de bebida te resultaría más atractiva? (Elige 2)",
-                options: ["Agua natural/saborizada", "Jugo natural prensado", "Té frío / Infusión", "Café latte / Macha", "Bebida funcional", "Bebida refrescante"],
-                type: "multiple",
-                max: 2
-            },
-            {
-                section: "Bloque 3 - Lácteos",
-                title: "¿Qué tipo de leche prefieres en tus bebidas? (Elige hasta 2)",
-                options: ["Leche entera", "Deslactosada", "Almendra", "Avena", "Soya", "No consumo leche"],
-                type: "multiple",
-                max: 2
-            },
-            {
-                section: "Bloque 4 - Perfil",
-                title: "¿En qué zona de Guayaquil realizas tus actividades principales?",
-                options: ["Norte", "Centro", "Sur", "Samborondón", "Vía a la Costa", "Durán"],
-                type: "single"
-            },
-            {
-                section: "Bloque 4 - Perfil",
-                title: "Rango de edad",
-                options: ["18-24", "25-34", "35-44", "45-54", "55+"],
+                section: "Perfil",
+                title: "¿En qué zona de Guayaquil realizas tus actividades?",
+                options: ["Norte", "Centro", "Sur", "Samborondón", "Vía a la Costa"],
                 type: "single"
             }
         ];
 
         function App() {
-            const [step, setStep] = useState('survey'); 
+            const [step, setStep] = useState('survey');
             const [currentIdx, setCurrentIdx] = useState(0);
             const [answers, setAnswers] = useState({});
             const [selectedInStep, setSelectedInStep] = useState([]);
             const [email, setEmail] = useState("");
             const [isLoading, setIsLoading] = useState(false);
-            const [clickCount, setClickCount] = useState(0);
+            const [adminClicks, setAdminClicks] = useState(0);
 
-            const handleAdminAccess = () => {
-                const newCount = clickCount + 1;
-                if (newCount >= 5) {
-                    const pass = prompt("Introduce la clave de acceso de XIGO:");
-                    if (pass === ADMIN_PASSWORD) {
-                        setStep('admin');
-                    } else {
-                        alert("Clave incorrecta.");
-                    }
-                    setClickCount(0);
-                } else {
-                    setClickCount(newCount);
-                }
+            // Simulación de guardado (en producción conectaría a Firebase con las variables __firebase_config)
+            const handleSave = async (data, status = 'completado', userEmail = '') => {
+                console.log("Datos para guardar:", { ...data, status, userEmail, timestamp: new Date() });
             };
 
-            const saveData = async (finalAnswers, status = 'completado', userEmail = '') => {
-                console.log("Simulando guardado en Firebase:", { finalAnswers, status, userEmail });
-                // Aquí iría la lógica de addDoc de Firebase
+            const handleAdminAccess = () => {
+                const clicks = adminClicks + 1;
+                if (clicks >= 5) {
+                    const p = prompt("Acceso Administrador XIGO:");
+                    if (p === ADMIN_PASSWORD) setStep('admin');
+                    setAdminClicks(0);
+                } else {
+                    setAdminClicks(clicks);
+                }
             };
 
             const handleSelect = (val) => {
@@ -149,14 +115,20 @@
                     setAnswers(newAnswers);
                     setSelectedInStep([val]);
                     if (q.terminateIf && val === q.terminateIf) {
-                        saveData(newAnswers, 'terminado_temprano');
                         setStep('terminated');
                     } else {
-                        setTimeout(() => nextStep(newAnswers), 400);
+                        setTimeout(() => {
+                            if (currentIdx < surveyData.length - 1) {
+                                setCurrentIdx(currentIdx + 1);
+                                setSelectedInStep([]);
+                            } else {
+                                setStep('email');
+                            }
+                        }, 400);
                     }
                 } else {
-                    let updated = selectedInStep.includes(val) 
-                        ? selectedInStep.filter(i => i !== val) 
+                    let updated = selectedInStep.includes(val)
+                        ? selectedInStep.filter(i => i !== val)
                         : (q.max && selectedInStep.length >= q.max ? selectedInStep : [...selectedInStep, val]);
                     setSelectedInStep(updated);
                     setAnswers({ ...answers, [q.title]: updated });
@@ -173,88 +145,90 @@
             };
 
             const submitEmail = async () => {
-                if (!email.includes('@')) return;
+                if (!email.includes('@')) return alert("Email no válido");
                 setIsLoading(true);
-                await saveData(answers, 'completado', email);
+                await handleSave(answers, 'completado', email);
                 setIsLoading(false);
                 setStep('success');
             };
 
             if (step === 'admin') {
                 return (
-                    <div className="p-6 bg-white min-h-screen">
+                    <div className="p-8 bg-white min-h-screen font-sans">
                         <div className="flex justify-between items-center mb-8 border-b pb-4">
-                            <h1 className="text-2xl font-bold text-xigo">Resultados XIGO</h1>
-                            <button onClick={() => setStep('survey')} className="text-gray-400 font-bold">CERRAR</button>
+                            <h1 className="text-2xl font-bold text-xigo">Admin Panel</h1>
+                            <button onClick={() => setStep('survey')} className="text-gray-400">CERRAR</button>
                         </div>
-                        <p className="text-gray-500 italic">Panel de administración cargando datos...</p>
+                        <p className="text-gray-500 italic">Aquí aparecerían los datos de Firebase...</p>
                     </div>
                 );
             }
 
             return (
                 <div className="min-h-screen flex items-center justify-center p-4">
-                    <div className="bg-white w-full max-w-lg rounded-[3rem] shadow-2xl overflow-hidden flex flex-col min-h-[650px] border border-white">
+                    <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col min-h-[600px] border border-white">
                         
-                        <div onClick={handleAdminAccess} className="bg-xigo p-8 text-center relative overflow-hidden cursor-pointer active:opacity-90">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16"></div>
-                            <h1 className="text-white font-black text-4xl tracking-[0.25em] mb-1">XIGO</h1>
-                            <p className="text-green-100 text-[10px] uppercase tracking-widest font-bold opacity-80 italic">Grab & Go • Calidad Premium</p>
+                        <div onClick={handleAdminAccess} className="bg-xigo p-8 text-center cursor-pointer select-none">
+                            <h1 className="text-white font-black text-3xl tracking-[0.2em]">XIGO</h1>
+                            <p className="text-green-100 text-[10px] uppercase tracking-widest font-bold">Grab & Go • Premium</p>
                         </div>
 
-                        <div className="p-8 sm:p-12 flex-grow flex flex-col">
+                        <div className="p-8 sm:p-10 flex-grow flex flex-col">
                             {step === 'survey' && (
                                 <div className="fade-in flex-grow">
-                                    <div className="w-full bg-gray-100 h-1 rounded-full mb-10 overflow-hidden">
-                                        <div className="bg-xigo h-full transition-all duration-1000" style={{ width: `${(currentIdx / surveyData.length) * 100}%` }}></div>
+                                    <div className="w-full bg-gray-100 h-1.5 rounded-full mb-8">
+                                        <div className="bg-xigo h-full transition-all duration-700" style={{ width: `${(currentIdx / surveyData.length) * 100}%` }}></div>
                                     </div>
-                                    <p className="text-xigo font-black text-[10px] uppercase mb-3 tracking-widest">{surveyData[currentIdx].section}</p>
-                                    <h2 className="text-2xl font-black text-gray-800 leading-[1.1] mb-8">{surveyData[currentIdx].title}</h2>
+                                    <p className="text-xigo font-bold text-xs uppercase mb-2 opacity-70">{surveyData[currentIdx].section}</p>
+                                    <h2 className="text-xl sm:text-2xl font-extrabold text-gray-800 leading-tight mb-6">{surveyData[currentIdx].title}</h2>
                                     <div className="space-y-3">
                                         {surveyData[currentIdx].options.map((opt, i) => (
                                             <button 
                                                 key={i} 
                                                 onClick={() => handleSelect(opt)}
-                                                className={`w-full p-5 rounded-2xl text-left font-bold transition-all border-2 text-sm
-                                                    ${selectedInStep.includes(opt) ? 'border-xigo bg-green-50 text-xigo' : 'border-gray-50 bg-white text-gray-600 hover:border-gray-200'}`}
+                                                className={`w-full p-4 rounded-2xl text-left font-bold transition-all border-2 
+                                                    ${selectedInStep.includes(opt) ? 'border-xigo bg-xigo-light text-xigo' : 'border-gray-50 bg-white text-gray-600 hover:border-gray-200'}`}
                                             >
                                                 {opt}
                                             </button>
                                         ))}
                                     </div>
                                     {surveyData[currentIdx].type === 'multiple' && selectedInStep.length > 0 && (
-                                        <button onClick={nextStep} className="mt-8 w-full bg-xigo text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest hover:opacity-90">Continuar</button>
+                                        <button onClick={nextStep} className="mt-8 w-full bg-xigo text-white font-black py-4 rounded-2xl shadow-xl uppercase tracking-widest">Continuar</button>
                                     )}
                                 </div>
                             )}
 
                             {step === 'email' && (
-                                <div className="fade-in text-center py-10">
+                                <div className="fade-in text-center py-10 flex-grow">
                                     <div className="text-4xl mb-6">🎁</div>
-                                    <h2 className="text-2xl font-black text-gray-800 mb-2 uppercase italic">¡Excelente!</h2>
-                                    <p className="text-gray-500 text-sm mb-8 leading-relaxed">Solo déjanos tu correo para enviarte el código de descuento del <strong>15%</strong>.</p>
+                                    <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">¡CASI LISTO!</h2>
+                                    <p className="text-gray-500 text-sm mb-8 leading-relaxed px-4">Ingresa tu correo para recibir tu cupón de <strong>15% OFF</strong> y noticias de nuestra apertura.</p>
                                     <input 
-                                        type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com"
+                                        type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@correo.com"
                                         className="w-full p-5 rounded-2xl border-2 border-gray-100 focus:border-xigo outline-none mb-4 text-center font-bold"
                                     />
-                                    <button onClick={submitEmail} disabled={isLoading} className="w-full bg-xigo text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest disabled:opacity-50">
-                                        {isLoading ? "Guardando..." : "Obtener mi Regalo"}
+                                    <button onClick={submitEmail} disabled={isLoading} className="w-full bg-xigo text-white font-black py-5 rounded-2xl shadow-xl uppercase tracking-widest">
+                                        {isLoading ? "ENVIANDO..." : "Obtener mi Regalo"}
                                     </button>
                                 </div>
                             )}
 
                             {step === 'success' && (
                                 <div className="fade-in text-center py-10">
-                                    <div className="w-20 h-20 bg-green-100 text-xigo rounded-full flex items-center justify-center text-3xl mx-auto mb-8">✓</div>
-                                    <h2 onClick={handleAdminAccess} className="text-3xl font-black text-xigo mb-4 uppercase italic cursor-pointer">¡TODO LISTO!</h2>
-                                    <p className="text-gray-600 mb-8 font-medium">Hemos registrado tu participación. Usa el código <strong>XIGO15</strong>.</p>
+                                    <div className="w-20 h-20 bg-green-100 text-xigo rounded-full flex items-center justify-center text-4xl mx-auto mb-6">✓</div>
+                                    <h2 onClick={handleAdminAccess} className="text-3xl font-black text-xigo mb-4 uppercase italic">¡HECHO!</h2>
+                                    <p className="text-gray-600 mb-8 font-medium">Hemos enviado el código <strong>XIGO15</strong> a tu correo.</p>
+                                    <div className="bg-gray-50 border-2 border-dashed border-gray-200 p-8 rounded-[2.5rem] text-gray-400 text-xs uppercase font-bold tracking-widest">
+                                        Revisa tu bandeja de entrada
+                                    </div>
                                 </div>
                             )}
 
                             {step === 'terminated' && (
                                 <div className="fade-in text-center py-10">
-                                    <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase italic">¡Gracias!</h2>
-                                    <p className="text-gray-500 text-sm mb-10">Apreciamos tu tiempo. Tus respuestas nos ayudan a entender mejor el mercado.</p>
+                                    <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">¡Gracias!</h2>
+                                    <p className="text-gray-500 text-sm mb-10">Apreciamos tu honestidad. Aunque no califiques para el cupón hoy, tus respuestas son muy valiosas.</p>
                                     <button onClick={() => window.location.reload()} className="text-xigo font-bold underline">Volver al inicio</button>
                                 </div>
                             )}
@@ -268,4 +242,3 @@
         root.render(<App />);
     </script>
 </body>
-</html>
