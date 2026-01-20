@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XIGO - Encuesta de Consumo</title>
+    <!-- Cargamos Tailwind desde CDN para el diseño -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --xigo-green: #2D5A27; --xigo-light: #f0fdf4; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9fafb; }
+        .bg-xigo { background-color: var(--xigo-green); }
+        .text-xigo { color: var(--xigo-green); }
+        .option-card { 
+            transition: all 0.2s ease; 
+            border: 2px solid #f3f4f6; 
+            cursor: pointer;
+            background-color: white;
+        }
+        .option-card:hover { border-color: #d1d5db; }
+        .option-card.selected { 
+            border-color: var(--xigo-green); 
+            background-color: var(--xigo-light); 
+            transform: scale(1.02);
+        }
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-2 sm:p-4">
+
+    <div id="app" class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col min-h-[600px]">
+        
+        <!-- ENCABEZADO -->
+        <div class="bg-xigo p-8 text-center">
+            <h1 class="text-white font-black text-3xl tracking-[0.2em] mb-1">XIGO</h1>
+            <p class="text-green-100 text-[10px] uppercase tracking-widest font-bold italic">Bebiendo y Comiendo • Grab & Go</p>
+        </div>
+
+        <!-- CUERPO DE LA ENCUESTA -->
+        <div class="p-6 sm:p-10 flex-grow flex flex-col">
+            <!-- Barra de Progreso -->
+            <div id="progress-container" class="w-full bg-gray-100 h-2 rounded-full mb-8">
+                <div id="progress-bar" class="bg-xigo h-2 rounded-full transition-all duration-700 w-0"></div>
+            </div>
+
+            <div id="survey-content" class="fade-in flex-grow">
+                <p id="section-label" class="text-xigo font-bold text-xs uppercase mb-2 tracking-tighter opacity-70"></p>
+                <h2 id="question-title" class="text-xl sm:text-2xl font-extrabold text-gray-800 leading-tight mb-6">Cargando encuesta...</h2>
+                
+                <div id="options-space" class="grid grid-cols-1 gap-3">
+                    <!-- Las opciones se generan aquí con JavaScript -->
+                </div>
+            </div>
+
+            <!-- BOTONES -->
+            <div class="mt-8">
+                <button id="next-btn" onclick="handleNext()" class="hidden w-full bg-xigo text-white font-black py-5 rounded-2xl shadow-xl hover:opacity-90 transition-all uppercase tracking-widest">
+                    Continuar
+                </button>
+                <p id="hint-text" class="text-center text-gray-400 text-[10px] mt-4 italic uppercase tracking-wider"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datos de la encuesta basados en el PDF de XIGO
+        const surveyData = [
+            {
+                section: "Filtro",
+                title: "¿En los últimos 30 días, has comprado comida preparada para consumir fuera de casa?",
+                options: ["Sí, lo he comprado", "No, pero lo consideraría", "No, no me interesa"],
+                type: "single",
+                terminateIf: "No, no me interesa"
+            },
+            {
+                section: "Estilo de Vida",
+                title: "¿Cuál describe mejor tu situación actual?",
+                options: ["Trabajo fuera de casa", "Trabajo desde casa", "Trabajo mixto", "Estudiante"],
+                type: "single"
+            },
+            {
+                section: "Frecuencia",
+                title: "¿Con qué frecuencia almuerzas fuera de casa en una semana?",
+                options: ["0 veces", "1-2 veces", "3-4 veces", "5+ veces"],
+                type: "single"
+            },
+            {
+                section: "Comida",
+                title: "¿En qué situaciones elegirías comida lista para llevar? (Varias opciones)",
+                options: ["Falta de tiempo", "Reuniones de trabajo", "No alcancé a cocinar", "Para llevar a casa"],
+                type: "multiple"
+            },
+            {
+                section: "Preferencias",
+                title: "¿Qué tipo de comida te genera más apetito? (Máximo 2)",
+                options: ["Ecuatoriana", "Casera ligera", "Bowls balanceados", "Ensaladas", "Sopas"],
+                type: "multiple",
+                max: 2
+            },
+            {
+                section: "Precios",
+                title: "¿Qué precio pagarías por un almuerzo fresco y de calidad?",
+                options: ["$5.99 - $7.99", "$7.99 - $9.99", "$9.99 - $11.99", "$12.00+"],
+                type: "single"
+            },
+            {
+                section: "Bebidas",
+                title: "¿Qué bebida prefieres para acompañar tu jornada? (Máximo 2)",
+                options: ["Agua natural", "Jugo prensado", "Té frío / Infusión", "Café / Macha", "Bebida refrescante"],
+                type: "multiple",
+                max: 2
+            },
+            {
+                section: "Ubicación",
+                title: "¿En qué zona realizas tus actividades?",
+                options: ["Norte", "Centro", "Sur", "Samborondón", "Vía a la Costa"],
+                type: "single"
+            },
+            {
+                section: "Edad",
+                title: "Tu rango de edad:",
+                options: ["18-24", "25-34", "35-44", "45-54", "55+"],
+                type: "single"
+            }
+        ];
+
+        let currentIdx = 0;
+        let selectedOptions = [];
+
+        function renderQuestion() {
+            const q = surveyData[currentIdx];
+            const content = document.getElementById('survey-content');
+            
+            content.classList.remove('fade-in');
+            void content.offsetWidth; 
+            content.classList.add('fade-in');
+
+            document.getElementById('section-label').innerText = q.section;
+            document.getElementById('question-title').innerText = q.title;
+            document.getElementById('hint-text').innerText = q.type === 'multiple' ? `Selecciona hasta ${q.max || 'varias'} opciones.` : "Selecciona una respuesta.";
+            
+            const space = document.getElementById('options-space');
+            space.innerHTML = '';
+            selectedOptions = [];
+            document.getElementById('next-btn').classList.add('hidden');
+
+            q.options.forEach(opt => {
+                const div = document.createElement('div');
+                div.className = "option-card p-4 sm:p-5 rounded-2xl font-bold text-gray-700 shadow-sm text-sm sm:text-base";
+                div.innerText = opt;
+                div.onclick = () => selectOption(div, opt, q.type);
+                space.appendChild(div);
+            });
+
+            const progress = (currentIdx / surveyData.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+        }
+
+        function selectOption(element, val, type) {
+            const q = surveyData[currentIdx];
+
+            if (type === 'single') {
+                if (q.terminateIf && val === q.terminateIf) {
+                    terminateSurvey();
+                    return;
+                }
+                document.querySelectorAll('.option-card').forEach(el => el.classList.remove('selected'));
+                element.classList.add('selected');
+                selectedOptions = [val];
+                setTimeout(handleNext, 400); 
+            } else {
+                if (selectedOptions.includes(val)) {
+                    selectedOptions = selectedOptions.filter(i => i !== val);
+                    element.classList.remove('selected');
+                } else {
+                    if (q.max && selectedOptions.length >= q.max) return; 
+                    selectedOptions.push(val);
+                    element.classList.add('selected');
+                }
+                
+                if (selectedOptions.length > 0) {
+                    document.getElementById('next-btn').classList.remove('hidden');
+                } else {
+                    document.getElementById('next-btn').classList.add('hidden');
+                }
+            }
+        }
+
+        function handleNext() {
+            currentIdx++;
+            if (currentIdx < surveyData.length) {
+                renderQuestion();
+            } else {
+                document.getElementById('progress-bar').style.width = `100%`;
+                showSuccess();
+            }
+        }
+
+        function terminateSurvey() {
+            document.getElementById('app').innerHTML = `
+                <div class="p-12 text-center fade-in">
+                    <div class="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">✕</div>
+                    <h2 class="text-2xl font-black text-gray-800 mb-4 uppercase">No calificas</h2>
+                    <p class="text-gray-500 leading-relaxed text-sm">Gracias por tu tiempo. Esta encuesta es para consumidores de comida Grab & Go.</p>
+                    <button onclick="location.reload()" class="mt-8 text-xigo font-bold underline">Volver al inicio</button>
+                </div>`;
+        }
+
+        function showSuccess() {
+            document.getElementById('app').innerHTML = `
+                <div class="p-10 text-center fade-in">
+                    <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">✓</div>
+                    <h2 class="text-3xl font-black text-xigo mb-2 uppercase">¡GRACIAS!</h2>
+                    <p class="text-gray-600 mb-8 font-medium">Has completado la experiencia XIGO.</p>
+                    
+                    <div class="bg-xigo p-6 rounded-[2rem] text-white shadow-2xl relative overflow-hidden">
+                        <p class="text-[10px] uppercase font-black tracking-[0.3em] mb-2 opacity-80">Cupón Vina María</p>
+                        <p class="text-4xl font-black mb-1">XIGO15</p>
+                        <p class="text-[10px] font-bold">15% DE DESCUENTO EN TU COMPRA</p>
+                    </div>
+                    
+                    <p class="text-[9px] text-gray-400 mt-6 uppercase font-bold tracking-widest">Toma una captura de pantalla para canjear</p>
+                </div>`;
+        }
+
+        window.onload = renderQuestion;
+    </script>
+</body>
+</html>
