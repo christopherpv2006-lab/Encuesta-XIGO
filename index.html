@@ -42,6 +42,7 @@
             height: 100%;
             object-fit: cover;
         }
+        .admin-row:hover { background-color: #f0fdf4; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -55,58 +56,58 @@
 
         const surveyData = [
             {
-                section: "Bloque 0 - Preguntas Filtro",
+                section: "Sección 0 - Filtro",
                 title: "¿En los últimos 30 días, has comprado comida preparada o empacada para consumir fuera de casa?",
                 options: ["Si, lo he comprado", "No, pero lo consideraría si fuera conveniente", "No, no me interesa"],
                 type: "single",
                 terminateIf: "No, no me interesa"
             },
             {
-                section: "Bloque 0 - Preguntas Filtro",
+                section: "Sección 0 - Filtro",
                 title: "¿Cuál describe mejor tu situación actual?",
                 options: ["Trabajo fuera de casa", "Trabajo desde casa/online", "Trabajo mixto [Oficina + casa]", "Estudiante/ No trabajo"],
                 type: "single"
             },
             {
-                section: "Bloque 0 - Preguntas Filtro",
+                section: "Sección 0 - Filtro",
                 title: "¿Con qué frecuencia almuerzas fuera de casa en una semana?",
                 options: ["0 veces", "1-2 veces", "3-4 veces", "5+ veces"],
                 type: "single"
             },
             {
-                section: "Bloque 1 - Comida",
+                section: "Sección 1 - Comida",
                 title: "¿Has comprado alguna vez comida preparada para consumir después?",
                 options: ["Si, regularmente", "Si, algunas veces", "No, pero me llama la atención", "No, no me interesa"],
                 type: "single"
             },
             {
-                section: "Bloque 1 - Comida",
+                section: "Sección 1 - Comida",
                 title: "¿En qué situaciones considerarías consumir comida lista durante un día laboral?",
                 options: ["Con poco tiempo para salir almorzar", "Reuniones o trabajo continuo", "No alcance a cocinarme", "Para comer en la oficina", "Entre reuniones o traslados", "Para llevar a casa"],
                 type: "multiple"
             },
             {
-                section: "Bloque 1 - Comida",
+                section: "Sección 1 - Comida",
                 title: "¿Qué tipo de comida te genera más apetito y confianza?",
                 options: ["Comida tradicional ecuatoriana", "Comida casera ligera", "Bowls balanceados", "Ensaladas completas", "Sopas/cremas", "Snacks salados"],
                 type: "multiple",
                 max: 3
             },
             {
-                section: "Bloque 3 - Precio & Elasticidad",
+                section: "Sección 2 - Precios",
                 title: "¿En promedio, cuánto sueles pagar hoy por tu almuerzo entre semana?",
                 options: ["Menos de $4.99", "$5.99-$7.99", "$7.99-$9.99", "$9.99-$11.99", "$11.99 mas"],
                 type: "single"
             },
             {
-                section: "Bloque 4 - RTD",
+                section: "Sección 3 - RTD",
                 title: "¿Qué tipo de bebida lista para llevar te resultaría más atractiva?",
                 options: ["Agua natural o saborizada", "Jugo natural prensado", "Té frío o infusión", "Café latte y Matcha", "Bebida funcional", "Bebida refrescante"],
                 type: "multiple",
                 max: 2
             },
             {
-                section: "Perfil",
+                section: "Sección 4 - Perfil",
                 title: "Zona donde realizas tus actividades",
                 options: ["Norte", "Centro", "Sur", "Samborondón", "Vía a la Costa", "Durán"],
                 type: "single"
@@ -121,8 +122,8 @@
             const [email, setEmail] = useState("");
             const [isLoading, setIsLoading] = useState(false);
             const [adminClicks, setAdminClicks] = useState(0);
+            const [selectedUser, setSelectedUser] = useState(null);
             
-            // Simulación de base de datos persistente en esta sesión
             const [database, setDatabase] = useState([]);
 
             const handleAdminAccess = () => {
@@ -139,7 +140,11 @@
             const handleSelect = (val) => {
                 const q = surveyData[currentIdx];
                 if (q.type === 'single') {
-                    setAnswers(prev => ({ ...prev, [q.title]: val }));
+                    // Guardamos la respuesta con metadatos de sección
+                    setAnswers(prev => ({ 
+                        ...prev, 
+                        [q.title]: { value: val, section: q.section } 
+                    }));
                     setSelectedInStep([val]);
                     if (q.terminateIf && val === q.terminateIf) {
                         setStep('terminated');
@@ -158,7 +163,10 @@
                         ? selectedInStep.filter(i => i !== val)
                         : (q.max && selectedInStep.length >= q.max ? selectedInStep : [...selectedInStep, val]);
                     setSelectedInStep(updated);
-                    setAnswers(prev => ({ ...prev, [q.title]: updated }));
+                    setAnswers(prev => ({ 
+                        ...prev, 
+                        [q.title]: { value: updated, section: q.section } 
+                    }));
                 }
             };
 
@@ -175,7 +183,6 @@
                 if (!email.includes('@')) return alert("Por favor ingresa un email válido");
                 setIsLoading(true);
                 
-                // Guardar en la "Base de Datos" local
                 const newRecord = {
                     id: Date.now(),
                     email: email,
@@ -191,53 +198,107 @@
             };
 
             if (step === 'admin') {
+                // Agrupar respuestas por sección para el usuario seleccionado
+                const groupedResponses = selectedUser ? Object.entries(selectedUser.responses).reduce((acc, [q, data]) => {
+                    const section = data.section || "General";
+                    if (!acc[section]) acc[section] = [];
+                    acc[section].push({ q, val: data.value });
+                    return acc;
+                }, {}) : {};
+
                 return (
-                    <div className="p-4 sm:p-8 bg-gray-50 min-h-screen font-sans">
-                        <div className="max-w-4xl mx-auto">
-                            <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                                <div>
-                                    <h1 className="text-2xl font-black text-xigo uppercase tracking-tighter">Panel de Registros XIGO</h1>
-                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Base de Datos Ordenada por Usuario</p>
+                    <div className="p-4 sm:p-8 bg-gray-50 min-h-screen font-sans overflow-y-auto">
+                        <div className="max-w-5xl mx-auto">
+                            {/* Header Admin */}
+                            <div className="flex justify-between items-center mb-6 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                                <div className="flex items-center gap-4">
+                                    <div className="bg-xigo p-3 rounded-2xl">
+                                        <div className="w-6 h-6 border-2 border-white rounded flex items-center justify-center text-white font-black text-xs">A</div>
+                                    </div>
+                                    <div>
+                                        <h1 className="text-xl font-black text-gray-800 uppercase tracking-tighter">XIGO Insight Panel</h1>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Base de Datos Estructurada</p>
+                                    </div>
                                 </div>
-                                <button onClick={() => setStep('survey')} className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-2 rounded-xl font-bold transition-colors">Cerrar</button>
+                                <button onClick={() => { setStep('survey'); setSelectedUser(null); }} className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-2 rounded-xl font-bold transition-all text-sm">Salir</button>
                             </div>
 
-                            {database.length === 0 ? (
-                                <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-gray-200">
-                                    <p className="text-gray-400 font-bold italic">No hay registros aún en esta sesión.</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-6">
-                                    {database.map((user) => (
-                                        <div key={user.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden fade-in">
-                                            <div className="bg-xigo p-4 flex justify-between items-center">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white font-black text-sm">
-                                                        {user.email[0].toUpperCase()}
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                {/* Lista de Personas */}
+                                <div className="lg:col-span-4 space-y-3">
+                                    <h3 className="text-xs font-black text-gray-400 uppercase ml-2 tracking-widest mb-4">Personas Registradas ({database.length})</h3>
+                                    <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                                        {database.length === 0 ? (
+                                            <p className="text-xs text-gray-300 italic p-4">No hay respuestas todavía.</p>
+                                        ) : (
+                                            database.map(user => (
+                                                <div 
+                                                    key={user.id} 
+                                                    onClick={() => setSelectedUser(user)}
+                                                    className={`admin-row p-4 rounded-2xl border transition-all flex items-center justify-between ${selectedUser?.id === user.id ? 'border-xigo bg-xigo-light shadow-sm' : 'border-white bg-white'}`}
+                                                >
+                                                    <div className="flex items-center gap-3 overflow-hidden">
+                                                        <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center font-black text-xs ${selectedUser?.id === user.id ? 'bg-xigo text-white' : 'bg-gray-100 text-gray-400'}`}>
+                                                            {user.email[0].toUpperCase()}
+                                                        </div>
+                                                        <div className="overflow-hidden">
+                                                            <p className="text-xs font-bold text-gray-700 truncate">{user.email}</p>
+                                                            <p className="text-[9px] text-gray-400 uppercase font-black">{user.date.split(',')[0]}</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <h3 className="text-white font-bold text-sm leading-none">{user.email}</h3>
-                                                        <span className="text-white/60 text-[10px] uppercase font-bold tracking-tighter">{user.date}</span>
-                                                    </div>
+                                                    <div className="text-[10px] text-xigo font-black">→</div>
                                                 </div>
-                                                <div className="bg-white/10 px-3 py-1 rounded-full">
-                                                    <span className="text-white text-[9px] font-black uppercase">ID: {user.id.toString().slice(-6)}</span>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Detalle por Sección */}
+                                <div className="lg:col-span-8">
+                                    {!selectedUser ? (
+                                        <div className="bg-white h-[600px] rounded-[2.5rem] flex flex-col items-center justify-center text-center border-2 border-dashed border-gray-200 p-10">
+                                            <div className="text-4xl mb-4">🖱️</div>
+                                            <h3 className="text-gray-400 font-black uppercase tracking-widest text-sm">Selecciona una persona</h3>
+                                            <p className="text-gray-300 text-xs mt-2 italic font-medium">Haz clic en el correo para ver el expediente completo de respuestas agrupado por sección.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 p-8 fade-in h-fit min-h-[600px]">
+                                            <div className="flex justify-between items-start mb-8 border-b border-gray-50 pb-6">
+                                                <div>
+                                                    <span className="bg-xigo/10 text-xigo text-[10px] font-black px-3 py-1 rounded-full uppercase mb-2 inline-block">Expediente de Usuario</span>
+                                                    <h2 className="text-2xl font-black text-gray-800 tracking-tighter">{selectedUser.email}</h2>
+                                                    <p className="text-xs text-gray-400 font-bold mt-1 uppercase">Completado el {selectedUser.date}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] text-gray-300 font-black uppercase">Referencia ID</p>
+                                                    <p className="text-sm font-mono text-gray-400">#{selectedUser.id.toString().slice(-8)}</p>
                                                 </div>
                                             </div>
-                                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {Object.entries(user.responses).map(([question, answer], idx) => (
-                                                    <div key={idx} className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                                        <p className="text-[10px] text-gray-400 font-black uppercase mb-1 leading-tight">{question}</p>
-                                                        <p className="text-gray-700 font-bold text-sm">
-                                                            {Array.isArray(answer) ? answer.join(", ") : answer}
-                                                        </p>
+
+                                            <div className="space-y-8">
+                                                {Object.entries(groupedResponses).map(([section, items]) => (
+                                                    <div key={section} className="bg-gray-50/50 p-6 rounded-3xl border border-gray-100">
+                                                        <h4 className="text-[10px] font-black text-xigo uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                                                            <span className="w-1.5 h-1.5 bg-xigo rounded-full"></span>
+                                                            {section}
+                                                        </h4>
+                                                        <div className="space-y-4">
+                                                            {items.map((item, idx) => (
+                                                                <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100/50">
+                                                                    <p className="text-xs font-bold text-gray-400 mb-1 leading-snug">{item.q}</p>
+                                                                    <p className="text-sm font-black text-gray-700">
+                                                                        {Array.isArray(item.val) ? item.val.join(", ") : item.val}
+                                                                    </p>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </div>
                 );
