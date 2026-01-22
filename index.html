@@ -30,7 +30,6 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #2D5A27; border-radius: 10px; }
         
-        /* Ajuste para que la imagen de cabecera sea perfecta */
         .header-bg {
             background-color: #2D5A27;
             display: flex;
@@ -41,7 +40,7 @@
         .header-img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Cubre todo el espacio sin deformarse */
+            object-fit: cover;
         }
     </style>
 </head>
@@ -49,17 +48,15 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
 
         const ADMIN_PASSWORD = "XIGO2026"; 
-        // URL de la imagen proporcionada por el usuario
         const LOGO_URL = "https://i.ibb.co/SD87TqHW/Black-Modern-Minimalist-Letter-A-Logo-1-1.png"; 
 
         const surveyData = [
-            // BLOQUE 0
             {
                 section: "Bloque 0 - Preguntas Filtro",
-                title: "¿En los últimos 30 días, has comprado comida preparada o empacada para consumir fuera de casa o en tu trabajo o en tu universidad?",
+                title: "¿En los últimos 30 días, has comprado comida preparada o empacada para consumir fuera de casa?",
                 options: ["Si, lo he comprado", "No, pero lo consideraría si fuera conveniente", "No, no me interesa"],
                 type: "single",
                 terminateIf: "No, no me interesa"
@@ -76,139 +73,42 @@
                 options: ["0 veces", "1-2 veces", "3-4 veces", "5+ veces"],
                 type: "single"
             },
-
-            // BLOQUE 1
             {
                 section: "Bloque 1 - Comida",
-                title: "¿Has comprado alguna vez comida preparada para consumir después (Refrigerada o en tarrinas empacadas)?",
+                title: "¿Has comprado alguna vez comida preparada para consumir después?",
                 options: ["Si, regularmente", "Si, algunas veces", "No, pero me llama la atención", "No, no me interesa"],
                 type: "single"
             },
             {
                 section: "Bloque 1 - Comida",
                 title: "¿En qué situaciones considerarías consumir comida lista durante un día laboral?",
-                options: ["Con poco tiempo para salir almorzar", "Reuniones o trabajo continuo", "No alcance a cocinarme", "Para comer en la oficina", "Entre reuniones o traslados", "Para llevar a casa", "No lo considera"],
+                options: ["Con poco tiempo para salir almorzar", "Reuniones o trabajo continuo", "No alcance a cocinarme", "Para comer en la oficina", "Entre reuniones o traslados", "Para llevar a casa"],
                 type: "multiple"
             },
             {
                 section: "Bloque 1 - Comida",
-                title: "¿Qué tipo de comida te genera más apetito y confianza si viene lista y empacada? (Elige hasta 3)",
-                options: ["Comida tradicional ecuatoriana", "Comida casera ligera (arroz con moros, carne asada, pollo desmechado, etc)", "Bowls balanceados (sushi, proteínicos, pasta)", "Ensaladas completas", "Sopas/cremas", "Snacks salados", "No confiaría en comida empacada"],
+                title: "¿Qué tipo de comida te genera más apetito y confianza?",
+                options: ["Comida tradicional ecuatoriana", "Comida casera ligera", "Bowls balanceados", "Ensaladas completas", "Sopas/cremas", "Snacks salados"],
                 type: "multiple",
                 max: 3
             },
-            {
-                section: "Bloque 1 - Comida",
-                title: "Para tu almuerzo/cena, ¿qué tamaño de porción prefieres normalmente?",
-                options: ["Ligero (para no sentirse pesado)", "Normal (me deja satisfecho)", "Grande (me gusta quedar lleno)", "Depende del día"],
-                type: "single"
-            },
-            {
-                section: "Bloque 1 - Comida",
-                title: "¿Qué esperas de un almuerzo para sentir que \"valió la pena\"? (Elige máximo 3)",
-                options: ["Que me llene (porción)", "Que sea saludable", "Que tenga una buena cantidad de proteína", "Que sea rápido y practico", "Que tenga muy buen sabor"],
-                type: "multiple",
-                max: 3
-            },
-            {
-                section: "Bloque 1 - Comida",
-                title: "¿Qué factor te haría dudar? (Elige máximo 3)",
-                options: ["Frescura", "Higiene", "Sabor", "Precio", "Tamaño de la porción", "Uso de conservantes", "Fecha de caducidad", "Empaque (Tiene que ser sostenible)"],
-                type: "multiple",
-                max: 3
-            },
-            {
-                section: "Bloque 1 - Comida",
-                title: "Si tuvieras acceso a comida lista, fresca y de buena calidad cerca de tu rutina diaria, ¿con qué frecuencia la consumirías?",
-                options: ["Nunca", "1 vez por semana", "2-3 veces por semana", "Casi todos los días de la semana laboral"],
-                type: "single"
-            },
-
-            // BLOQUE 2
-            {
-                section: "Bloque 2 - Delivery",
-                title: "¿Considerarías pedir comida lista por delivery si fuera confiable, fresca y de buena calidad?",
-                options: ["Sí, con frecuencia", "Sí, ocasionalmente", "Tal vez", "No"],
-                type: "single"
-            },
-            {
-                section: "Bloque 2 - Delivery",
-                title: "Cuando piensas en pedir comida por delivery, ¿qué formato te resulta más atractivo?",
-                options: ["Pedir una comida puntual cuando la necesito", "Pedir comida para 2-3 días", "Pedir comida para toda la semana laboral", "Depende del momento / del día", "No pediría comida por delivery"],
-                type: "single"
-            },
-            {
-                section: "Bloque 2 - Delivery",
-                title: "Si este tipo de comida estuviera disponible por delivery, ¿con qué frecuencia crees que la pedirías?",
-                options: ["Nunca", "1 vez por semana", "2-3 veces por semana", "Más de 3 veces por semana"],
-                type: "single"
-            },
-
-            // BLOQUE 3
             {
                 section: "Bloque 3 - Precio & Elasticidad",
                 title: "¿En promedio, cuánto sueles pagar hoy por tu almuerzo entre semana?",
-                options: ["Menos de $4.99", "$5.99-$7.99", "$7.99-$9.99", "$9.99-$11.99", "$11.99 mas", "No pago almuerzo"],
-                type: "single"
-            },
-            {
-                section: "Bloque 3 - Precio & Elasticidad",
-                title: "¿Qué precio te parece razonable para un almuerzo listo, fresco, porcionado y de excelente calidad nutricional?",
                 options: ["Menos de $4.99", "$5.99-$7.99", "$7.99-$9.99", "$9.99-$11.99", "$11.99 mas"],
                 type: "single"
             },
             {
-                section: "Bloque 3 - Precio & Elasticidad",
-                title: "¿A partir de qué precio considerarías que este tipo de almuerzo ya es caro?",
-                options: ["Menos de $4.99", "$5.99-$7.99", "$7.99-$9.99", "$9.99-$11.99", "$11.99 mas"],
-                type: "single"
-            },
-            {
-                section: "Bloque 3 - Precio & Elasticidad",
-                title: "Imagina que, por ajustes normales de costos, un almuerzo que hoy compras a $5.99 pasará a costar $7.99. ¿Qué harías?",
-                options: ["Lo seguiría comprando igual", "Lo compraría con menos frecuencia", "Buscaría otra opción", "Dejaría de comprarlo"],
-                type: "single"
-            },
-
-            // BLOQUE 4
-            {
                 section: "Bloque 4 - RTD",
-                title: "Durante tu jornada laboral, ¿compras bebidas listas para tomar?",
-                options: ["Sí, casi todos los días", "Varias veces por semana", "Ocasionalmente", "Rara vez", "Nunca"],
-                type: "single"
-            },
-            {
-                section: "Bloque 4 - RTD",
-                title: "Cuando piensas en una bebida lista para llevar, ¿cuál te resultaría más atractiva? (Elige hasta 2)",
-                options: ["Agua natural o saborizada (baja en azúcar)", "Jugo natural prensado / fresco", "Té frío o infusión natural", "Café latte y Matcha", "Bebida funcional (energía, enfoque, proteína)", "Bebida refrescante para el calor", "No suelo comprar bebidas listas"],
+                title: "¿Qué tipo de bebida lista para llevar te resultaría más atractiva?",
+                options: ["Agua natural o saborizada", "Jugo natural prensado", "Té frío o infusión", "Café latte y Matcha", "Bebida funcional", "Bebida refrescante"],
                 type: "multiple",
                 max: 2
             },
             {
-                section: "Bloque 4 - RTD",
-                title: "Cuando compras bebidas listas, ¿qué tipo de leche prefieres normalmente? (Elige 2)",
-                options: ["Leche regular (entera)", "Leche deslactosada", "Leche de almendra", "Leche de avena", "Leche de soya", "No consumo bebidas con leche"],
-                type: "multiple",
-                max: 2
-            },
-            {
-                section: "Bloque 4 - RTD",
-                title: "¿Qué precio te parece razonable para una bebida RTD de buena calidad?",
-                options: ["Hasta $1.99", "$2.49-$2.99", "$3.49-$3.99", "$4.49-$4.99", "Más de $5.00"],
-                type: "single"
-            },
-
-            // BLOQUE FINAL
-            {
-                section: "Perfil del Consumidor",
-                title: "Edad",
-                options: ["18-24", "25-34", "35-44", "45-54", "55+"],
-                type: "single"
-            },
-            {
-                section: "Perfil del Consumidor",
-                title: "Zona donde realizas la mayoría de tus actividades",
-                options: ["Norte", "Centro", "Sur", "Samborondón / Vía a la Costa", "Durán"],
+                section: "Perfil",
+                title: "Zona donde realizas tus actividades",
+                options: ["Norte", "Centro", "Sur", "Samborondón", "Vía a la Costa", "Durán"],
                 type: "single"
             }
         ];
@@ -221,6 +121,9 @@
             const [email, setEmail] = useState("");
             const [isLoading, setIsLoading] = useState(false);
             const [adminClicks, setAdminClicks] = useState(0);
+            
+            // Simulación de base de datos persistente en esta sesión
+            const [database, setDatabase] = useState([]);
 
             const handleAdminAccess = () => {
                 const clicks = adminClicks + 1;
@@ -236,8 +139,7 @@
             const handleSelect = (val) => {
                 const q = surveyData[currentIdx];
                 if (q.type === 'single') {
-                    const newAnswers = { ...answers, [q.title]: val };
-                    setAnswers(newAnswers);
+                    setAnswers(prev => ({ ...prev, [q.title]: val }));
                     setSelectedInStep([val]);
                     if (q.terminateIf && val === q.terminateIf) {
                         setStep('terminated');
@@ -256,7 +158,7 @@
                         ? selectedInStep.filter(i => i !== val)
                         : (q.max && selectedInStep.length >= q.max ? selectedInStep : [...selectedInStep, val]);
                     setSelectedInStep(updated);
-                    setAnswers({ ...answers, [q.title]: updated });
+                    setAnswers(prev => ({ ...prev, [q.title]: updated }));
                 }
             };
 
@@ -272,7 +174,17 @@
             const submitEmail = () => {
                 if (!email.includes('@')) return alert("Por favor ingresa un email válido");
                 setIsLoading(true);
+                
+                // Guardar en la "Base de Datos" local
+                const newRecord = {
+                    id: Date.now(),
+                    email: email,
+                    date: new Date().toLocaleString(),
+                    responses: { ...answers }
+                };
+                
                 setTimeout(() => {
+                    setDatabase(prev => [newRecord, ...prev]);
                     setIsLoading(false);
                     setStep('success');
                 }, 1500);
@@ -280,14 +192,53 @@
 
             if (step === 'admin') {
                 return (
-                    <div className="p-8 bg-white min-h-screen font-sans">
-                        <div className="flex justify-between items-center mb-8 border-b pb-4">
-                            <h1 className="text-2xl font-bold text-xigo uppercase tracking-tighter">Panel XIGO</h1>
-                            <button onClick={() => setStep('survey')} className="bg-gray-100 px-4 py-2 rounded-xl font-bold">Cerrar</button>
+                    <div className="p-4 sm:p-8 bg-gray-50 min-h-screen font-sans">
+                        <div className="max-w-4xl mx-auto">
+                            <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                                <div>
+                                    <h1 className="text-2xl font-black text-xigo uppercase tracking-tighter">Panel de Registros XIGO</h1>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Base de Datos Ordenada por Usuario</p>
+                                </div>
+                                <button onClick={() => setStep('survey')} className="bg-gray-100 hover:bg-gray-200 text-gray-600 px-6 py-2 rounded-xl font-bold transition-colors">Cerrar</button>
+                            </div>
+
+                            {database.length === 0 ? (
+                                <div className="text-center py-20 bg-white rounded-[2.5rem] border-2 border-dashed border-gray-200">
+                                    <p className="text-gray-400 font-bold italic">No hay registros aún en esta sesión.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    {database.map((user) => (
+                                        <div key={user.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden fade-in">
+                                            <div className="bg-xigo p-4 flex justify-between items-center">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-white font-black text-sm">
+                                                        {user.email[0].toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-white font-bold text-sm leading-none">{user.email}</h3>
+                                                        <span className="text-white/60 text-[10px] uppercase font-bold tracking-tighter">{user.date}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white/10 px-3 py-1 rounded-full">
+                                                    <span className="text-white text-[9px] font-black uppercase">ID: {user.id.toString().slice(-6)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {Object.entries(user.responses).map(([question, answer], idx) => (
+                                                    <div key={idx} className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                                        <p className="text-[10px] text-gray-400 font-black uppercase mb-1 leading-tight">{question}</p>
+                                                        <p className="text-gray-700 font-bold text-sm">
+                                                            {Array.isArray(answer) ? answer.join(", ") : answer}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                        <pre className="bg-gray-50 p-6 rounded-3xl text-[10px] overflow-auto">
-                            {JSON.stringify(answers, null, 2)}
-                        </pre>
                     </div>
                 );
             }
@@ -296,13 +247,8 @@
                 <div className="min-h-screen flex items-center justify-center p-2 sm:p-4 bg-gray-50 font-sans">
                     <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[750px] sm:h-[800px] border border-gray-100">
                         
-                        {/* CABECERA CON TU IMAGEN ÚNICAMENTE */}
                         <div onClick={handleAdminAccess} className="header-bg flex-shrink-0 h-40 sm:h-48 cursor-default">
-                            <img 
-                                src={LOGO_URL} 
-                                alt="XIGO Header" 
-                                className="header-img"
-                            />
+                            <img src={LOGO_URL} alt="XIGO Header" className="header-img" />
                         </div>
 
                         <div className="p-6 sm:p-10 flex-grow flex flex-col overflow-hidden">
@@ -345,13 +291,13 @@
                                 <div className="fade-in text-center py-6 flex-grow flex flex-col justify-center">
                                     <div className="text-5xl mb-6">🍷</div>
                                     <h2 className="text-2xl font-black text-gray-800 mb-4 uppercase">¡ENCUESTA COMPLETADA!</h2>
-                                    <p className="text-gray-500 text-sm mb-8 italic">Ingresa tu email para recibir un **15% de descuento** para tu compra de vino en Vina María como recompensa.</p>
+                                    <p className="text-gray-500 text-sm mb-8 italic">Ingresa tu email para recibir un **15% de descuento** para tu compra de vino en Vina María.</p>
                                     <input 
                                         type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="tu@email.com"
                                         className="w-full p-4 rounded-xl border-2 border-gray-100 focus:border-xigo outline-none mb-4 text-center font-bold"
                                     />
                                     <button onClick={submitEmail} disabled={isLoading} className="w-full bg-xigo text-white font-black py-5 rounded-xl shadow-xl uppercase tracking-widest">
-                                        {isLoading ? "ENVIANDO..." : "Recibir mi Descuento"}
+                                        {isLoading ? "PROCESANDO..." : "Recibir mi Descuento"}
                                     </button>
                                 </div>
                             )}
@@ -360,7 +306,8 @@
                                 <div className="fade-in text-center py-10 flex-grow flex flex-col justify-center">
                                     <div className="w-20 h-20 bg-green-100 text-xigo rounded-full flex items-center justify-center text-4xl mx-auto mb-6">✓</div>
                                     <h2 className="text-2xl font-black text-xigo mb-4 uppercase italic">¡MUCHAS GRACIAS!</h2>
-                                    <p className="text-gray-600 mb-8 font-medium">Tus respuestas nos ayudarán a perfeccionar el concepto XIGO. Revisa tu correo para usar tu cupón en @vinamariaec.</p>
+                                    <p className="text-gray-600 mb-8 font-medium">Tus respuestas han sido registradas. Tu cupón ha sido enviado a tu correo.</p>
+                                    <button onClick={() => window.location.reload()} className="text-xigo font-bold underline uppercase text-xs">Nueva Encuesta</button>
                                 </div>
                             )}
 
