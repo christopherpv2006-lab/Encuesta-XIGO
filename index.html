@@ -2,22 +2,19 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XIGO - Encuesta de Mercado Cloud</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>XIGO - Encuesta de Mercado</title>
+    
+    <!-- Scripts Base -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <script type="importmap">
-    {
-      "imports": {
-        "firebase/app": "https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js",
-        "firebase/firestore": "https://www.gstatic.com/firebasejs/11.1.0/firebase-firestore.js",
-        "firebase/auth": "https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js"
-      }
-    }
-    </script>
+    <!-- Firebase SDK Legacy/UMD (Más compatible con móviles) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <script>
         tailwind.config = {
@@ -32,40 +29,33 @@
         }
     </script>
     <style>
-        .fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        body { -webkit-tap-highlight-color: transparent; }
+        .fade-in { animation: fadeIn 0.3s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #2D5A27; border-radius: 10px; }
-        .header-bg { background-color: #2D5A27; display: flex; align-items: center; justify-content: center; overflow: hidden; height: 180px; }
+        .header-bg { background-color: #2D5A27; display: flex; align-items: center; justify-content: center; height: 160px; overflow: hidden; }
         .header-img { width: 100%; height: 100%; object-fit: cover; }
+        input, button { font-family: inherit; }
     </style>
 </head>
-<body>
+<body class="bg-gray-50">
     <div id="root"></div>
 
-    <script type="module">
-        import { initializeApp } from "firebase/app";
-        import { getFirestore, collection, addDoc, onSnapshot, query } from "firebase/firestore";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
-
-        // Hacer Firebase disponible globalmente para el script de Babel
-        window.FB = { initializeApp, getFirestore, collection, addDoc, onSnapshot, query, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged };
-    </script>
-
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        
-        // Configuración y constantes
+        const { useState, useEffect, useRef } = React;
+
+        // Configuración
         const ADMIN_PASSWORD = "XIGO2026"; 
         const LOGO_URL = "https://i.ibb.co/SD87TqHW/Black-Modern-Minimalist-Letter-A-Logo-1-1.png"; 
 
-        // Inicializar Firebase usando el puente global
-        const { initializeApp, getFirestore, collection, addDoc, onSnapshot, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } = window.FB;
-        
+        // Inicializar Firebase (Versión Compat para máxima estabilidad en iPhone)
         const firebaseConfig = JSON.parse(__firebase_config);
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'xigo-survey-v1';
 
         const surveyData = [
@@ -105,232 +95,208 @@
             const [database, setDatabase] = useState([]);
             const [selectedUser, setSelectedUser] = useState(null);
             const [user, setUser] = useState(null);
+            const scrollRef = useRef(null);
 
             useEffect(() => {
-                const initAuth = async () => {
+                const login = async () => {
                     try {
+                        let res;
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
+                            res = await auth.signInWithCustomToken(__initial_auth_token);
                         } else {
-                            await signInAnonymously(auth);
+                            res = await auth.signInAnonymously();
                         }
-                    } catch (e) { console.error("Auth error", e); }
+                        setUser(res.user);
+                    } catch (e) {
+                        console.error("Auth failed", e);
+                    }
                 };
-                initAuth();
-                const unsubscribe = onAuthStateChanged(auth, setUser);
-                return () => unsubscribe();
+                login();
             }, []);
 
             useEffect(() => {
                 if (!user) return;
-                const responsesRef = collection(db, 'artifacts', appId, 'public', 'data', 'responses');
-                const unsubscribe = onSnapshot(responsesRef, (snapshot) => {
-                    const docs = snapshot.docs.map(doc => ({
-                        id: doc.id,
-                        ...doc.data()
-                    }));
+                const path = `artifacts/${appId}/public/data/responses`;
+                const unsubscribe = db.collection(path).onSnapshot((snapshot) => {
+                    const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     setDatabase(docs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
-                }, (error) => {
-                    console.error("Error fetching data:", error);
-                });
+                }, (err) => console.error("Firestore error", err));
                 return () => unsubscribe();
             }, [user]);
+
+            useEffect(() => {
+                if (scrollRef.current) scrollRef.current.scrollTop = 0;
+            }, [currentIdx]);
 
             const handleAdminAccess = () => {
                 const clicks = adminClicks + 1;
                 if (clicks >= 5) {
-                    const p = prompt("Password Admin:");
+                    const p = prompt("Acceso Administrador:");
                     if (p === ADMIN_PASSWORD) setStep('admin');
                     setAdminClicks(0);
                 } else setAdminClicks(clicks);
             };
 
-            const downloadExcel = () => {
-                if (database.length === 0) return alert("No hay datos para descargar");
-                const clean = (text) => !text ? "" : `"${String(text).replace(/"/g, '""')}"`;
-                const headers = ["ID", "Fecha", "Email", ...surveyData.map(q => q.title)];
-                const rows = database.map(u => {
-                    const rowData = [u.id, u.date, u.email];
-                    surveyData.forEach(q => {
-                        const ans = u.responses?.[q.title]?.value || "Sin respuesta";
-                        rowData.push(Array.isArray(ans) ? ans.join(" | ") : ans);
-                    });
-                    return rowData.map(clean).join(";");
-                });
-                const csvContent = "\uFEFF" + [headers.map(clean).join(";"), ...rows].join("\r\n");
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
-                link.download = `XIGO_Data_Cloud_${new Date().toISOString().split('T')[0]}.csv`;
-                link.click();
-            };
-
             const handleSelect = (val) => {
                 const q = surveyData[currentIdx];
                 if (q.type === 'single') {
-                    setAnswers({...answers, [q.title]: { value: val, section: q.section }});
+                    setAnswers(prev => ({...prev, [q.title]: { value: val, section: q.section }}));
                     setSelectedInStep([val]);
                     if (q.terminateIf && val === q.terminateIf) return setStep('terminated');
+                    
                     setTimeout(() => {
                         if (currentIdx < surveyData.length - 1) {
                             setCurrentIdx(currentIdx + 1);
                             setSelectedInStep([]);
                         } else setStep('email');
-                    }, 300);
+                    }, 250);
                 } else {
                     let updated = selectedInStep.includes(val) 
                         ? selectedInStep.filter(i => i !== val) 
                         : (q.max && selectedInStep.length >= q.max ? selectedInStep : [...selectedInStep, val]);
                     setSelectedInStep(updated);
-                    setAnswers({...answers, [q.title]: { value: updated, section: q.section }});
+                    setAnswers(prev => ({...prev, [q.title]: { value: updated, section: q.section }}));
                 }
             };
 
             const submitSurvey = async () => {
-                if (!email.includes('@')) return alert("Email inválido");
-                if (!user) return alert("Error de conexión. Intenta de nuevo.");
-                
+                if (!email.includes('@')) return alert("Por favor ingresa un email válido");
                 setIsLoading(true);
                 try {
-                    const responsesRef = collection(db, 'artifacts', appId, 'public', 'data', 'responses');
-                    await addDoc(responsesRef, {
-                        email,
-                        date: new Date().toLocaleString(),
+                    await db.collection(`artifacts/${appId}/public/data/responses`).add({
+                        email: email.trim(),
+                        date: new Date().toLocaleString('es-EC'),
                         timestamp: new Date().toISOString(),
                         responses: answers,
-                        userId: user.uid
+                        userId: user ? user.uid : 'anon'
                     });
-                    setIsLoading(false);
                     setStep('success');
                 } catch (e) {
+                    alert("Error al guardar: " + e.message);
+                } finally {
                     setIsLoading(false);
-                    alert("Error al guardar en la nube: " + e.message);
                 }
             };
 
-            if (step === 'admin') return (
-                <div className="min-h-screen bg-gray-50 p-4 font-sans overflow-y-auto">
-                    <div className="max-w-6xl mx-auto">
-                        <div className="flex flex-col md:flex-row justify-between items-center mb-6 bg-white p-6 rounded-3xl shadow-sm border gap-4">
-                            <div className="flex items-center gap-4">
-                                <img src={LOGO_URL} className="h-10 w-auto" alt="XIGO Logo" />
-                                <h1 className="text-xl font-black text-xigo">BASE DE DATOS EN LA NUBE</h1>
-                            </div>
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={downloadExcel}
-                                    className="bg-xigo text-white px-6 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-green-800 transition-all shadow-md active:scale-95"
-                                >
-                                    <span>📥</span> EXCEL ACTUALIZADO
-                                </button>
-                                <button onClick={() => setStep('survey')} className="bg-gray-100 px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-200 transition-colors">Salir</button>
-                            </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            <div className="space-y-2 max-h-[600px] overflow-y-auto custom-scrollbar bg-white p-4 rounded-3xl border shadow-sm">
-                                <p className="text-[10px] font-black text-gray-400 uppercase ml-2 mb-2 tracking-widest">Registros en Nube ({database.length})</p>
+            if (step === 'admin') {
+                return (
+                    <div className="min-h-screen bg-gray-100 p-4">
+                        <div className="max-w-5xl mx-auto flex flex-col md:flex-row gap-4 h-[90vh]">
+                            <div className="bg-white w-full md:w-80 rounded-2xl shadow p-4 overflow-y-auto custom-scrollbar">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="font-black text-xigo">REGISTROS ({database.length})</h2>
+                                    <button onClick={() => setStep('survey')} className="text-xs bg-gray-200 px-2 py-1 rounded">Cerrar</button>
+                                </div>
                                 {database.map(u => (
-                                    <div 
-                                        key={u.id} 
-                                        onClick={() => setSelectedUser(u)} 
-                                        className={`p-4 rounded-2xl cursor-pointer border transition-all ${selectedUser?.id === u.id ? 'bg-xigo text-white border-xigo shadow-lg scale-[1.02]' : 'bg-white text-gray-700 hover:border-xigo hover:text-xigo'}`}
-                                    >
-                                        <p className="font-bold truncate text-sm">{u.email}</p>
-                                        <p className={`text-[10px] uppercase ${selectedUser?.id === u.id ? 'text-green-100' : 'text-gray-400'}`}>{u.date}</p>
+                                    <div key={u.id} onClick={() => setSelectedUser(u)} className={`p-3 rounded-xl mb-2 cursor-pointer border ${selectedUser?.id === u.id ? 'bg-xigo text-white' : 'hover:bg-gray-50'}`}>
+                                        <p className="text-xs font-bold truncate">{u.email}</p>
+                                        <p className="text-[10px] opacity-70">{u.date}</p>
                                     </div>
                                 ))}
                             </div>
-
-                            <div className="lg:col-span-2 bg-white rounded-3xl p-6 border shadow-sm min-h-[500px]">
+                            <div className="flex-1 bg-white rounded-2xl shadow p-6 overflow-y-auto custom-scrollbar">
                                 {selectedUser ? (
                                     <div className="fade-in">
-                                        <div className="flex justify-between items-center mb-6 border-b pb-4">
-                                            <div>
-                                                <h3 className="text-xl font-black text-gray-800">{selectedUser.email}</h3>
-                                                <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">UID: {selectedUser.userId}</p>
+                                        <h3 className="text-xl font-black mb-4 border-b pb-2">{selectedUser.email}</h3>
+                                        {surveyData.map((q, i) => (
+                                            <div key={i} className="mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase">{q.section}</p>
+                                                <p className="text-xs font-bold mb-1">{q.title}</p>
+                                                <p className="text-sm text-xigo font-black">
+                                                    {selectedUser.responses?.[q.title] ? 
+                                                        (Array.isArray(selectedUser.responses[q.title].value) ? selectedUser.responses[q.title].value.join(" | ") : selectedUser.responses[q.title].value) 
+                                                        : "No respondió"}
+                                                </p>
                                             </div>
-                                            <span className="text-[10px] font-black bg-xigo-light text-xigo px-3 py-1.5 rounded-full border border-green-100">{selectedUser.date}</span>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                                            {surveyData.map((q, i) => {
-                                                const userAns = selectedUser.responses?.[q.title];
-                                                return (
-                                                    <div key={i} className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className="bg-white text-xigo text-[9px] font-black px-2 py-0.5 rounded border border-green-100 uppercase tracking-tighter">{q.section}</span>
-                                                        </div>
-                                                        <p className="text-[11px] font-bold text-gray-500 mb-2 leading-tight">{q.title}</p>
-                                                        <p className="text-sm font-black text-xigo">
-                                                            {userAns ? (Array.isArray(userAns.value) ? userAns.value.join(", ") : userAns.value) : "Sin respuesta"}
-                                                        </p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                        ))}
                                     </div>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-gray-300 py-20 text-center">
-                                        <div className="bg-gray-50 p-6 rounded-full mb-4">☁️</div>
-                                        <p className="font-bold">Datos sincronizados con la nube</p>
-                                        <p className="text-xs mt-1">Selecciona un registro para ver el detalle completo</p>
-                                    </div>
-                                )}
+                                ) : <div className="h-full flex items-center justify-center text-gray-300">Selecciona un usuario</div>}
                             </div>
                         </div>
                     </div>
-                </div>
-            );
+                );
+            }
 
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
-                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[700px] border">
-                        <div onClick={handleAdminAccess} className="header-bg flex-shrink-0 cursor-pointer">
-                            <img src={LOGO_URL} className="header-img" alt="XIGO Header" />
+                <div className="fixed inset-0 flex items-center justify-center bg-gray-50 sm:p-4">
+                    <div className="bg-white w-full h-full sm:max-w-md sm:h-[750px] sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col border">
+                        <div onClick={handleAdminAccess} className="header-bg flex-shrink-0">
+                            <img src={LOGO_URL} className="header-img" alt="XIGO" />
                         </div>
-                        <div className="p-8 flex-grow flex flex-col overflow-hidden">
+                        
+                        <div className="flex-1 p-6 md:p-8 flex flex-col overflow-hidden relative">
                             {step === 'survey' && (
-                                <div className="fade-in h-full flex flex-col">
+                                <div className="h-full flex flex-col fade-in">
                                     <div className="w-full bg-gray-100 h-1 rounded-full mb-6">
                                         <div className="bg-xigo h-full transition-all duration-500" style={{width: `${((currentIdx+1)/surveyData.length)*100}%`}}></div>
                                     </div>
-                                    <div className="flex-grow overflow-y-auto custom-scrollbar pr-1">
-                                        <p className="text-xigo font-black text-[9px] uppercase tracking-widest mb-1 opacity-60">{surveyData[currentIdx].section}</p>
-                                        <h2 className="text-lg font-black text-gray-800 leading-tight mb-6">{surveyData[currentIdx].title}</h2>
-                                        <div className="space-y-2">
+                                    
+                                    <div ref={scrollRef} className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+                                        <p className="text-xigo font-black text-[10px] uppercase tracking-widest mb-1 opacity-60">{surveyData[currentIdx].section}</p>
+                                        <h2 className="text-xl font-black text-gray-800 leading-tight mb-6">{surveyData[currentIdx].title}</h2>
+                                        
+                                        <div className="space-y-3 mb-6">
                                             {surveyData[currentIdx].options.map(o => (
-                                                <button key={o} onClick={() => handleSelect(o)} className={`w-full p-4 rounded-2xl text-left text-sm font-bold border-2 transition-all ${selectedInStep.includes(o) ? 'border-xigo bg-xigo-light text-xigo shadow-sm' : 'border-gray-50 text-gray-600 hover:border-gray-200'}`}>{o}</button>
+                                                <button 
+                                                    key={o} 
+                                                    onClick={() => handleSelect(o)} 
+                                                    className={`w-full p-4 rounded-2xl text-left text-sm font-bold border-2 transition-all active:scale-[0.98] ${selectedInStep.includes(o) ? 'border-xigo bg-xigo-light text-xigo' : 'border-gray-100 text-gray-600'}`}
+                                                >
+                                                    {o}
+                                                </button>
                                             ))}
                                         </div>
                                     </div>
+
                                     {surveyData[currentIdx].type === 'multiple' && selectedInStep.length > 0 && (
-                                        <button onClick={() => {setCurrentIdx(currentIdx+1); setSelectedInStep([])}} className="mt-4 w-full bg-xigo text-white py-4 rounded-2xl font-black uppercase tracking-widest">Siguiente</button>
+                                        <button 
+                                            onClick={() => {setCurrentIdx(currentIdx+1); setSelectedInStep([])}} 
+                                            className="w-full bg-xigo text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-transform"
+                                        >
+                                            Siguiente
+                                        </button>
                                     )}
                                 </div>
                             )}
+
                             {step === 'email' && (
-                                <div className="fade-in text-center flex flex-col justify-center h-full">
-                                    <h2 className="text-2xl font-black mb-4 tracking-tighter">¡CASI LISTO!</h2>
-                                    <p className="text-sm text-gray-500 mb-8 font-medium">Completa tu correo para recibir el cupón de **Vina María** y guardar tus respuestas.</p>
-                                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" className="p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none focus:border-xigo"/>
-                                    <button onClick={submitSurvey} disabled={isLoading} className="bg-xigo text-white py-4 rounded-2xl font-black uppercase tracking-widest w-full">
-                                        {isLoading ? "GUARDANDO EN NUBE..." : "FINALIZAR"}
+                                <div className="h-full flex flex-col justify-center items-center text-center fade-in">
+                                    <h2 className="text-2xl font-black mb-2 tracking-tighter text-gray-800 uppercase">¡Casi terminamos!</h2>
+                                    <p className="text-sm text-gray-500 mb-8 px-4 font-medium italic">Déjanos tu correo para recibir tu cupón de Vina María y finalizar la encuesta.</p>
+                                    <input 
+                                        type="email" 
+                                        value={email} 
+                                        onChange={e => setEmail(e.target.value)} 
+                                        placeholder="tu@email.com" 
+                                        className="w-full p-4 border-2 rounded-2xl mb-4 text-center font-bold outline-none focus:border-xigo transition-colors"
+                                    />
+                                    <button 
+                                        onClick={submitSurvey} 
+                                        disabled={isLoading} 
+                                        className="bg-xigo text-white py-4 rounded-2xl font-black uppercase tracking-widest w-full shadow-xl disabled:bg-gray-300"
+                                    >
+                                        {isLoading ? "ENVIANDO..." : "FINALIZAR"}
                                     </button>
                                 </div>
                             )}
+
                             {step === 'success' && (
-                                <div className="fade-in text-center flex flex-col justify-center h-full">
-                                    <div className="text-5xl mb-4 animate-bounce">✅</div>
-                                    <h2 className="text-2xl font-black text-xigo">¡REGISTRADO!</h2>
-                                    <p className="text-gray-500 text-sm mt-2 font-medium">Tus respuestas se han guardado de forma permanente en la nube de XIGO.</p>
-                                    <button onClick={() => window.location.reload()} className="mt-8 text-xigo font-bold text-xs underline uppercase tracking-widest">Nueva encuesta</button>
+                                <div className="h-full flex flex-col justify-center items-center text-center fade-in p-6">
+                                    <div className="w-20 h-20 bg-xigo-light rounded-full flex items-center justify-center mb-6 border-4 border-xigo">
+                                        <span className="text-3xl">✔</span>
+                                    </div>
+                                    <h2 className="text-2xl font-black text-xigo mb-2">¡ENCUESTA COMPLETADA!</h2>
+                                    <p className="text-gray-500 text-sm font-medium">Tus respuestas han sido procesadas correctamente en nuestra base de datos en la nube.</p>
+                                    <p className="text-xigo font-black mt-6 text-sm">¡Pronto recibirás tu cupón!</p>
+                                    <button onClick={() => window.location.reload()} className="mt-10 text-[10px] font-black text-gray-400 uppercase tracking-widest underline">Nueva encuesta</button>
                                 </div>
                             )}
+
                             {step === 'terminated' && (
-                                <div className="fade-in text-center flex flex-col justify-center h-full text-gray-400">
-                                    <h2 className="text-xl font-black mb-4 uppercase">Gracias por tu interés</h2>
-                                    <p className="text-sm mb-8">Esta encuesta es para consumidores activos.</p>
-                                    <button onClick={() => window.location.reload()} className="text-xigo font-bold text-xs underline uppercase tracking-widest">Reiniciar</button>
+                                <div className="h-full flex flex-col justify-center items-center text-center fade-in opacity-60">
+                                    <h2 className="text-xl font-black mb-2 uppercase">Gracias</h2>
+                                    <p className="text-sm mb-8 px-6">Lamentamos que el servicio no sea de tu interés en este momento.</p>
+                                    <button onClick={() => window.location.reload()} className="text-xigo font-bold text-xs underline uppercase">Reiniciar</button>
                                 </div>
                             )}
                         </div>
