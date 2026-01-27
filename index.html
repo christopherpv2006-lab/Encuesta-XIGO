@@ -4,245 +4,340 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>XIGO - Encuesta Oficial</title>
-    <!-- Estilos Premium -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs (Versiones estables para máxima compatibilidad) -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
     <style>
-        :root { --primary: #2D5A27; --bg: #ffffff; --text: #1e293b; }
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { margin: 0; padding: 0; background: #f1f5f9; display: flex; justify-content: center; min-height: 100vh; }
-        #app { background: white; width: 100%; max-width: 500px; min-height: 100vh; display: flex; flex-direction: column; position: relative; }
+        :root { --xigo: #2D5A27; }
+        .text-xigo { color: var(--xigo); }
+        .bg-xigo { background-color: var(--xigo); }
+        .border-xigo { border-color: var(--xigo); }
+        .option-selected { border-color: var(--xigo); background-color: #f0fdf4; color: var(--xigo); transform: scale(1.02); }
         
-        .header { background: #000; height: 160px; display: flex; align-items: center; justify-content: center; border-bottom: 4px solid var(--primary); overflow: hidden; }
-        .header img { width: 100%; height: 100%; object-fit: cover; }
+        body { 
+            background-color: #f1f5f9; 
+            -webkit-font-smoothing: antialiased; 
+            margin: 0;
+            padding: 0;
+        }
 
-        .progress-container { padding: 15px 25px 0; }
-        .progress-bar { background: #f1f5f9; height: 6px; border-radius: 10px; overflow: hidden; }
-        .progress-fill { background: var(--primary); height: 100%; width: 0%; transition: width 0.4s ease; }
-        
-        .content { flex: 1; padding: 25px; display: flex; flex-direction: column; }
-        .section-tag { font-size: 10px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 5px; }
-        .question-title { font-size: 1.1rem; font-weight: 700; color: var(--text); line-height: 1.3; margin-bottom: 20px; }
-        
-        .option-btn { 
-            width: 100%; padding: 14px 18px; margin-bottom: 10px; border: 2px solid #f1f5f9;
-            border-radius: 12px; text-align: left; font-weight: 600; color: #475569;
-            background: white; cursor: pointer; transition: all 0.2s; font-size: 14px;
-        }
-        .option-btn.selected { border-color: var(--primary); background: #f0fdf4; color: var(--primary); }
-        
-        .footer { padding: 15px 25px 30px; border-top: 1px solid #f1f5f9; }
-        .next-btn { 
-            width: 100%; background: var(--primary); color: white; border: none;
-            padding: 18px; border-radius: 12px; font-weight: 800; font-size: 14px;
-            text-transform: uppercase; cursor: pointer; display: none;
+        .app-container { 
+            max-width: 450px; 
+            margin: 0 auto; 
+            min-height: 100vh; 
+            background: white; 
+            display: flex; 
+            flex-direction: column; 
         }
         
-        .admin-card { background: #f8fafc; padding: 10px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid var(--primary); font-size: 12px; }
-        .hidden { display: none !important; }
-        
-        /* Pantalla de carga */
-        #loader { position: absolute; inset: 0; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
-        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .brand-header {
+            background-color: #000000;
+            padding: 0;
+            border-bottom: 4px solid var(--xigo);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            overflow: hidden;
+            height: 120px;
+        }
+
+        .brand-logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
-    <!-- Firebase SDKs (Compat mode para mayor estabilidad) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 </head>
 <body>
-    <div id="app">
-        <div id="loader">
-            <div class="spinner"></div>
-            <p style="margin-top: 15px; font-weight: 600; color: #64748b;">Iniciando encuesta...</p>
+
+<div class="app-container shadow-2xl relative">
+    <!-- Header -->
+    <header class="brand-header cursor-pointer" id="admin-trigger">
+        <img src="https://lh3.googleusercontent.com/u/0/d/1WmKpnJPnBgB3OyYqe-a-OgRODLuuPjTq=w1000" alt="XIGO Logo" class="brand-logo-img" onerror="this.src='https://via.placeholder.com/450x120?text=XIGO+PREMIUM'">
+    </header>
+
+    <!-- Indicador de Preguntas Restantes -->
+    <div class="px-8 pt-6">
+        <div class="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+            <div id="prog-bar" class="bg-xigo h-full w-0 transition-all duration-700"></div>
         </div>
-
-        <div class="header" id="header-admin-trigger">
-             <img src="https://lh3.googleusercontent.com/u/0/d/1WmKpnJPnBgB3OyYqe-a-OgRODLuuPjTq=w1600-h1600-iv1" alt="XIGO">
-        </div>
-
-        <div class="progress-container" id="prog-ui">
-            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
-            <p id="step-counter" style="font-size: 10px; color: #94a3b8; margin-top: 5px; text-align: right;"></p>
-        </div>
-
-        <div class="content" id="main-content"></div>
-
-        <div class="footer" id="footer-ui">
-            <button id="next-btn" class="next-btn" onclick="nextStep()">Continuar</button>
+        <div class="flex justify-between mt-2">
+            <span id="section-name" class="text-[9px] font-black text-xigo uppercase tracking-widest italic">Cargando...</span>
+            <span id="questions-left" class="text-[9px] font-bold text-gray-400 uppercase tracking-tighter">Calculando...</span>
         </div>
     </div>
 
-    <script>
-        // --- CONFIGURACIÓN FIREBASE ---
-        let db = null;
-        let auth = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'xigo-encuesta-guayaquil';
+    <!-- Contenedor de Preguntas -->
+    <main id="survey-ui" class="flex-1 px-8 py-8 overflow-y-auto custom-scrollbar">
+        <!-- Renderizado dinámico -->
+    </main>
 
+    <!-- Footer Fijo para Multiopción -->
+    <footer id="footer-ui" class="px-8 pb-8 hidden">
+        <button id="next-btn" onclick="next()" class="w-full bg-xigo text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">
+            Continuar
+        </button>
+    </footer>
+</div>
+
+<script>
+    // --- LÓGICA DE ALMACENAMIENTO (FIREBASE) ---
+    let db = null;
+    let auth = null;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : "xigo-final-survey-2026";
+    const ADMIN_PASS = "XIGO2026";
+
+    // Inicialización con re-intento y manejo de errores
+    const initStorage = async () => {
         try {
-            const firebaseConfig = JSON.parse(__firebase_config);
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            auth = firebase.auth();
-        } catch (e) { console.error("Firebase no configurado o falló."); }
-
-        // --- DATOS DE LA ENCUESTA (BASADO EN TU PDF) ---
-        const surveySteps = [
-            { id: 'F1', section: 'FILTRO', type: 'single', q: '¿En los últimos 30 días, has comprado comida preparada o empacada para consumir fuera de casa?', options: ['Sí, lo he comprado', 'No, pero lo consideraría', 'No, no me interesa'], terminate: 'No, no me interesa' },
-            { id: 'F2', section: 'FILTRO', type: 'single', q: '¿Cuál describe mejor tu situación actual?', options: ['Trabajo fuera de casa', 'Trabajo desde casa/online', 'Trabajo mixto', 'Estudiante / No trabajo'] },
-            { id: 'F3', section: 'FILTRO', type: 'single', q: '¿Con qué frecuencia almuerzas fuera de casa en una semana?', options: ['0 veces', '1-2 veces', '3-4 veces', '5+ veces'] },
-            { id: 'C3', section: 'COMIDA', type: 'multi', q: '¿Qué tipo de comida te genera más confianza si viene lista y empacada? (Elige hasta 3)', options: ['Comida tradicional ecuatoriana', 'Comida casera ligera', 'Bowls balanceados', 'Ensaladas completas', 'Sopas / Cremas', 'Snacks salados'], max: 3 },
-            { id: 'P2', section: 'PRECIOS', type: 'single', q: '¿Qué precio te parece razonable por un almuerzo listo y fresco?', options: ['Menos de $4.99', '$5.99 - $7.99', '$7.99 - $9.99', '$9.99 - $11.99', 'Más de $11.99'] },
-            { id: 'R2', section: 'BEBIDAS', type: 'multi', q: '¿Qué bebida RTD (lista para tomar) te resulta más atractiva?', options: ['Agua saborizada', 'Jugo natural fresco', 'Té frío / Infusión', 'Café Latte / Matcha', 'Bebida funcional', 'Bebida refrescante'], max: 2 },
-            { id: 'D2', section: 'PERFIL', type: 'single', q: '¿En qué zona de Guayaquil realizas tus actividades?', options: ['Norte', 'Centro', 'Sur', 'Samborondón / Vía a la Costa', 'Durán'] }
-        ];
-
-        let currentIdx = 0;
-        let responses = {};
-        let tempMulti = [];
-        let adminClickCount = 0;
-
-        // --- LÓGICA DE INICIO ---
-        async function startApp() {
-            if (auth) {
-                try { await auth.signInAnonymously(); } catch(e) {}
+            if (typeof __firebase_config !== 'undefined') {
+                const config = JSON.parse(__firebase_config);
+                firebase.initializeApp(config);
+                db = firebase.firestore();
+                auth = firebase.auth();
+                
+                // Autenticación para asegurar que los datos se guarden en el servidor
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await auth.signInWithCustomToken(__initial_auth_token);
+                } else {
+                    await auth.signInAnonymously();
+                }
+                console.log("Conectado a la base de datos de XIGO");
             }
-            document.getElementById('loader').classList.add('hidden');
-            renderStep();
+        } catch (e) {
+            console.error("Error conectando a la base de datos:", e);
         }
+    };
 
-        function renderStep() {
-            const step = surveySteps[currentIdx];
-            const main = document.getElementById('main-content');
-            const nextBtn = document.getElementById('next-btn');
-            
-            // Actualizar Progreso
-            document.getElementById('progress-fill').style.width = `${(currentIdx / surveySteps.length) * 100}%`;
-            document.getElementById('step-counter').innerText = `Pregunta ${currentIdx + 1} de ${surveySteps.length}`;
-            
-            tempMulti = [];
-            nextBtn.style.display = 'none';
+    initStorage();
 
-            main.innerHTML = `
-                <div class="section-tag">${step.section}</div>
-                <h2 class="question-title">${step.q}</h2>
-                <div id="options-container">
-                    ${step.options.map(opt => `
-                        <button class="option-btn" onclick="selectOption('${opt.replace(/'/g, "\\'")}')">${opt}</button>
+    // --- CONTENIDO DE LA ENCUESTA (23 PREGUNTAS) ---
+    const questions = [
+        { s: 'Filtro', id: 'F1', q: '¿En los últimos 30 días, has comprado comida preparada o empacada para consumir fuera de casa o en tu trabajo/universidad?', opt: ['Sí, lo he comprado', 'No, pero lo consideraría si fuera conveniente', 'No, no me interesa'], type: 'single', exit: 'No, no me interesa' },
+        { s: 'Filtro', id: 'F2', q: '¿Cuál describe mejor tu situación actual?', opt: ['Trabajo fuera de casa', 'Trabajo desde casa/online', 'Trabajo mixto [Oficina + casa]', 'Estudiante/ No trabajo'], type: 'single' },
+        { s: 'Filtro', id: 'F3', q: '¿Con qué frecuencia almuerzas fuera de casa en una semana?', opt: ['0 veces', '1-2 veces', '3-4 veces', '5+ veces'], type: 'single' },
+        { s: 'Comida', id: 'C1', q: '¿Has comprado alguna vez comida preparada para consumir después (Refrigerada o en tarrinas empacadas)?', opt: ['Sí, regularmente', 'Sí, algunas veces', 'No, pero me llama la atención', 'No, no me interesa'], type: 'single' },
+        { s: 'Comida', id: 'C2', q: '¿En qué situaciones considerarías consumir comida lista durante un día laboral?', opt: ['Con poco tiempo para salir almorzar', 'Reuniones o trabajo continuo', 'No alcance a cocinarme', 'Para comer en la oficina', 'Entre reuniones o traslados', 'Para llevar a casa'], type: 'multi', max: 6 },
+        { s: 'Comida', id: 'C3', q: '¿Qué tipo de comida te genera más apetito y confianza si viene lista y empacada?', opt: ['Comida tradicional ecuatoriana', 'Comida casera ligera (arroz, carne, pollo)', 'Bowls balanceados (sushi, proteína, pasta)', 'Ensaladas completas', 'Sopas/cremas', 'Snacks salados'], type: 'multi', max: 3 },
+        { s: 'Comida', id: 'C4', q: 'Para tu almuerzo/cena, ¿qué tamaño de porción prefieres normalmente?', opt: ['Ligero (para no sentirse pesado)', 'Normal (me deja satisfecho)', 'Grande (me gusta quedar lleno)', 'Depende del día'], type: 'single' },
+        { s: 'Comida', id: 'C5', q: '¿Qué esperas de un almuerzo para sentir que "valió la pena"?', opt: ['Que me llene (porción)', 'Que sea saludable', 'Que tenga buena cantidad de proteína', 'Que sea rápido y práctico', 'Que tenga muy buen sabor'], type: 'multi', max: 3 },
+        { s: 'Comida', id: 'C6', q: '¿Qué factor te haría dudar al comprar comida empacada?', opt: ['Frescura', 'Higiene', 'Sabor', 'Precio', 'Tamaño de la porción', 'Uso de conservantes', 'Empaque sostenible'], type: 'multi', max: 3 },
+        { s: 'Comida', id: 'C7', q: 'Si tuvieras acceso a comida lista, fresca y de buena calidad, ¿con qué frecuencia la consumirías?', opt: ['Nunca', '1 vez por semana', '2-3 veces por semana', 'Casi todos los días'], type: 'single' },
+        { s: 'Delivery', id: 'D1', q: '¿Considerarías pedir comida lista por delivery si fuera confiable, fresca y de buena calidad?', opt: ['Sí, con frecuencia', 'Sí, ocasionalmente', 'Tal vez', 'No'], type: 'single' },
+        { s: 'Delivery', id: 'D2', q: 'Cuando piensas en pedir por delivery, ¿qué formato te resulta más atractivo?', opt: ['Pedir una comida puntual', 'Pedir comida para 2-3 días', 'Pedir para toda la semana laboral', 'Depende del momento'], type: 'single' },
+        { s: 'Delivery', id: 'D3', q: 'Si este tipo de comida estuviera disponible por delivery, ¿con qué frecuencia la pedirías?', opt: ['Nunca', '1 vez por semana', '2-3 veces por semana', 'Más de 3 veces por semana'], type: 'single' },
+        { s: 'Precio', id: 'P1', q: '¿En promedio, cuánto sueles pagar hoy por tu almuerzo entre semana?', opt: ['Menos de $4.99', '$5.99-$7.99', '$7.99-$9.99', '$9.99-$11.99', '$11.99 o más', 'No pago almuerzo'], type: 'single' },
+        { s: 'Precio', id: 'P2', q: '¿Qué precio te parece razonable para un almuerzo listo, fresco y de excelente calidad?', opt: ['Menos de $4.99', '$5.99-$7.99', '$7.99-$9.99', '$9.99-$11.99', '$11.99 o más'], type: 'single' },
+        { s: 'Precio', id: 'P3', q: '¿A partir de qué precio considerarías que este tipo de almuerzo ya es CARO?', opt: ['Menos de $4.99', '$5.99-$7.99', '$7.99-$9.99', '$9.99-$11.99', '$11.99 o más'], type: 'single' },
+        { s: 'Precio', id: 'P4', q: 'Si un almuerzo que hoy compras a $5.99 pasara a costar $7.99 por mejores ingredientes, ¿qué harías?', opt: ['Lo seguiría comprando igual', 'Lo compraría con menos frecuencia', 'Buscaría otra opción', 'Dejaría de comprarlo'], type: 'single' },
+        { s: 'Bebidas', id: 'R1', q: 'Durante tu jornada laboral, ¿compras bebidas listas para tomar?', opt: ['Sí, casi todos los días', 'Varias veces por semana', 'Ocasionalmente', 'Rara vez', 'Nunca'], type: 'single' },
+        { s: 'Bebidas', id: 'R2', q: '¿Cuál de estas opciones te resultaría más atractiva en tu día a día?', opt: ['Agua natural o saborizada', 'Jugo natural prensado', 'Té frío o infusión natural', 'Café latte y Matcha', 'Bebida funcional (energía/proteína)', 'Refresco para el calor'], type: 'multi', max: 2 },
+        { s: 'Bebidas', id: 'R3', q: '¿Qué tipo de leche prefieres normalmente en tus bebidas?', opt: ['Leche regular', 'Leche deslactosada', 'Leche de almendra', 'Leche de avena', 'Leche de soya', 'No consumo leche'], type: 'multi', max: 2 },
+        { s: 'Bebidas', id: 'R4', q: '¿Qué precio te parece razonable para una bebida lista para tomar (RTD) de buena calidad?', opt: ['Hasta $1.99', '$2.49-$2.99', '$3.49-$3.99', '$4.49-$4.99', 'Más de $5.00'], type: 'single' },
+        { s: 'Perfil', id: 'D1_Edad', q: '¿Cuál es tu rango de edad?', opt: ['18-24', '25-34', '35-44', '45-54', '55+'], type: 'single' },
+        { s: 'Perfil', id: 'D2_Zona', q: '¿En qué zona de Guayaquil realizas la mayoría de tus actividades?', opt: ['Norte', 'Centro', 'Sur', 'Samborondón / Vía a la Costa', 'Durán'], type: 'single' }
+    ];
+
+    let current = 0;
+    let results = {};
+    let selections = [];
+    let clickCount = 0;
+
+    function render() {
+        if (current >= questions.length) return final();
+        const item = questions[current];
+        const ui = document.getElementById('survey-ui');
+        const footer = document.getElementById('footer-ui');
+        
+        const perc = Math.round((current / questions.length) * 100);
+        document.getElementById('prog-bar').style.width = perc + '%';
+        
+        const left = questions.length - current;
+        document.getElementById('questions-left').innerText = left === 1 ? 'Última pregunta' : `Faltan ${left} preguntas`;
+        document.getElementById('section-name').innerText = item.s;
+
+        selections = [];
+        footer.classList.toggle('hidden', item.type === 'single');
+
+        ui.innerHTML = `
+            <div class="fade-in">
+                <p class="text-[10px] font-bold text-gray-300 uppercase tracking-widest mb-2 italic">Pregunta ${current + 1}</p>
+                <h2 class="text-2xl font-black text-gray-800 leading-tight mb-8">${item.q}</h2>
+                <div class="space-y-3 pb-20">
+                    ${item.opt.map(o => `
+                        <button onclick="pick('${o.replace(/'/g, "\\'")}')" class="opt-btn w-full text-left p-5 border-2 border-gray-100 rounded-2xl font-bold text-gray-500 transition-all hover:bg-gray-50 active:scale-[0.98]">
+                            <div class="flex justify-between items-center">
+                                <span>${o}</span>
+                                <div class="indicator w-2 h-2 rounded-full bg-gray-200"></div>
+                            </div>
+                        </button>
                     `).join('')}
                 </div>
-            `;
-        }
+            </div>
+        `;
+    }
 
-        window.selectOption = (val) => {
-            const step = surveySteps[currentIdx];
-            const btns = document.querySelectorAll('.option-btn');
+    window.pick = (val) => {
+        const item = questions[current];
+        const btns = document.querySelectorAll('.opt-btn');
 
-            if (step.type === 'single') {
-                if (step.terminate && val === step.terminate) { finishPremature(); return; }
-                responses[step.id] = val;
-                btns.forEach(b => b.classList.toggle('selected', b.innerText === val));
-                setTimeout(() => { currentIdx++; if(currentIdx < surveySteps.length) renderStep(); else renderFinal(); }, 300);
-            } else {
-                if (tempMulti.includes(val)) {
-                    tempMulti = tempMulti.filter(v => v !== val);
-                } else if (tempMulti.length < (step.max || 10)) {
-                    tempMulti.push(val);
+        if (item.type === 'single') {
+            if (item.exit && val === item.exit) return finishExit();
+            results[item.id] = val;
+            event.currentTarget.classList.add('option-selected');
+            setTimeout(() => { current++; render(); }, 300);
+        } else {
+            if (selections.includes(val)) selections = selections.filter(s => s !== val);
+            else if (selections.length < item.max) selections.push(val);
+            
+            btns.forEach(b => {
+                const bText = b.querySelector('span').innerText.trim();
+                const indicator = b.querySelector('.indicator');
+                if (selections.includes(bText)) {
+                    b.classList.add('option-selected');
+                    indicator.classList.replace('bg-gray-200', 'bg-xigo');
+                } else {
+                    b.classList.remove('option-selected');
+                    indicator.classList.replace('bg-xigo', 'bg-gray-200');
                 }
-                responses[step.id] = tempMulti;
-                btns.forEach(b => b.classList.toggle('selected', tempMulti.includes(b.innerText)));
-                document.getElementById('next-btn').style.display = tempMulti.length > 0 ? 'block' : 'none';
+            });
+            results[item.id] = selections;
+        }
+    };
+
+    window.next = () => {
+        if (selections.length === 0) return;
+        current++;
+        render();
+    };
+
+    function final() {
+        document.getElementById('footer-ui').classList.add('hidden');
+        document.getElementById('prog-bar').style.width = '100%';
+        document.getElementById('questions-left').innerText = 'Completado';
+        
+        document.getElementById('survey-ui').innerHTML = `
+            <div class="text-center py-4 fade-in">
+                <div class="text-6xl mb-6">🎁</div>
+                <h2 class="text-3xl font-black text-gray-800 mb-4 uppercase italic tracking-tighter">¡EXCELENTE!</h2>
+                <p class="text-gray-400 font-medium mb-8">Ingresa tu correo para recibir tu cupón del 15% de descuento en <b>Vina María</b>.</p>
+                <input type="email" id="email" placeholder="tu@email.com" class="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-xigo outline-none text-center font-bold text-lg mb-4">
+                <button onclick="save()" id="save-btn" class="w-full bg-xigo text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Obtener Cupón</button>
+            </div>
+        `;
+    }
+
+    async function save() {
+        const email = document.getElementById('email').value;
+        if (!email.includes('@')) return;
+        const btn = document.getElementById('save-btn');
+        btn.disabled = true;
+        btn.innerText = "GUARDANDO...";
+        
+        const data = { 
+            email, 
+            results, 
+            ts: new Date().toISOString(),
+            userAgent: navigator.userAgent
+        };
+
+        if (db) {
+            try { 
+                // Ruta estricta de Firestore para persistencia según requerimientos
+                await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses').add(data); 
+                showSuccess();
+            } catch (e) { 
+                console.error(e);
+                btn.disabled = false;
+                btn.innerText = "Error al guardar. Reintentar";
             }
-        };
+        } else {
+            // Backup local si falla internet momentáneamente
+            localStorage.setItem('xigo_backup_' + Date.now(), JSON.stringify(data));
+            showSuccess();
+        }
+    }
 
-        window.nextStep = () => {
-            currentIdx++;
-            if (currentIdx < surveySteps.length) renderStep();
-            else renderFinal();
-        };
+    function showSuccess() {
+        document.getElementById('survey-ui').innerHTML = `
+            <div class="text-center py-10 fade-in">
+                <div class="w-16 h-16 bg-green-100 text-xigo rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">✓</div>
+                <h2 class="text-xigo text-4xl font-black italic mb-2">XIGO15</h2>
+                <p class="font-bold text-gray-800 mb-6 uppercase tracking-widest text-[10px]">Tu código de descuento</p>
+                <div class="p-6 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 text-sm text-gray-400 font-medium leading-relaxed">
+                    Muestra este código o una captura de pantalla en <b>@vinamariaec</b> para validar tu beneficio.
+                </div>
+                <button onclick="location.reload()" class="mt-12 text-gray-300 font-bold uppercase text-[9px] tracking-[0.4em] hover:text-xigo transition-colors">Finalizar encuesta</button>
+            </div>
+        `;
+    }
 
-        function renderFinal() {
-            document.getElementById('prog-ui').classList.add('hidden');
-            document.getElementById('footer-ui').classList.add('hidden');
-            document.getElementById('main-content').innerHTML = `
-                <div style="text-align: center; padding-top: 20px;">
-                    <h2 class="question-title">¡Gracias por participar!</h2>
-                    <p style="color: #64748b; font-size: 14px; margin-bottom: 25px;">Déjanos tu correo para enviarte tu cupón del 15% en Vina María.</p>
-                    <input type="email" id="email-final" placeholder="email@ejemplo.com" 
-                        style="width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; text-align: center; font-size: 16px;">
-                    <button id="save-btn" onclick="saveData()" class="next-btn" style="display:block">RECIBIR CUPÓN</button>
+    function finishExit() {
+        document.getElementById('survey-ui').innerHTML = `
+            <div class="text-center py-20 px-10 fade-in">
+                <p class="text-gray-300 font-bold uppercase tracking-widest leading-relaxed text-sm">Gracias por tu honestidad. Esta encuesta está dirigida a compradores frecuentes de comida preparada.</p>
+                <button onclick="location.reload()" class="mt-8 text-xigo font-black uppercase text-[10px] tracking-widest">Volver al inicio</button>
+            </div>
+        `;
+    }
+
+    // ACCESO ADMIN (5 clics en el logo)
+    document.getElementById('admin-trigger').onclick = () => {
+        clickCount++;
+        if (clickCount >= 5) {
+            const p = prompt("Password Admin:");
+            if (p === ADMIN_PASS) showAdmin();
+            clickCount = 0;
+        }
+    };
+
+    async function showAdmin() {
+        if (!db) return alert("No hay conexión a la base de datos");
+        const ui = document.getElementById('survey-ui');
+        ui.innerHTML = `<p class="text-center p-10 font-bold text-gray-400">Consultando base de datos en tiempo real...</p>`;
+        
+        try {
+            const snap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses').get();
+            ui.innerHTML = `
+                <div class="space-y-4 fade-in">
+                    <div class="p-8 bg-xigo text-white rounded-3xl shadow-xl">
+                        <p class="text-[10px] uppercase font-bold opacity-60 tracking-widest mb-1">Base de Datos XIGO</p>
+                        <p class="text-6xl font-black italic tracking-tighter">${snap.size}</p>
+                        <p class="text-xs mt-2 font-bold opacity-80 uppercase tracking-widest">Respuestas Guardadas</p>
+                    </div>
+                    <div class="p-6 border-2 border-gray-50 rounded-3xl">
+                        <p class="text-[10px] font-black text-gray-300 uppercase mb-4 tracking-widest">Últimos correos:</p>
+                        <div class="space-y-2 max-h-40 overflow-y-auto">
+                            ${snap.docs.reverse().slice(0, 10).map(doc => `
+                                <div class="text-xs font-bold text-gray-500 border-b border-gray-50 pb-1 flex justify-between">
+                                    <span>${doc.data().email}</span>
+                                    <span class="text-[8px] opacity-40">${new Date(doc.data().ts).toLocaleDateString()}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <button onclick="location.reload()" class="w-full py-4 rounded-2xl font-bold uppercase text-[10px] text-gray-400 tracking-widest">Cerrar Sesión Admin</button>
                 </div>
             `;
+        } catch (e) {
+            ui.innerHTML = `<p class="text-center text-red-500 p-10">Error de conexión: ${e.message}</p>`;
         }
+    }
 
-        async function saveData() {
-            const email = document.getElementById('email-final').value;
-            if (!email.includes('@')) { alert("Por favor ingresa un correo válido"); return; }
-            
-            const btn = document.getElementById('save-btn');
-            btn.innerText = "GUARDANDO...";
-            btn.disabled = true;
+    render();
+</script>
 
-            const finalPayload = {
-                email,
-                responses,
-                date: new Date().toISOString(),
-                userAgent: navigator.userAgent
-            };
+<style>
+    .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
 
-            // Guardar en Firestore si está disponible
-            if (db) {
-                try {
-                    await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses').add(finalPayload);
-                } catch (e) { console.error("Error guardando en nube:", e); }
-            }
-
-            // Mostrar cupón
-            document.getElementById('main-content').innerHTML = `
-                <div style="text-align: center; padding-top: 30px;">
-                    <div style="font-size: 50px;">🍷</div>
-                    <h2 class="question-title" style="color: var(--primary); margin-top:10px;">CÓDIGO: XIGO15</h2>
-                    <p style="font-size: 14px; color: #64748b;">Presenta este código en <b>@vinamariaec</b> para canjear tu 15% de descuento.</p>
-                    <button onclick="location.reload()" style="margin-top:30px; background:none; border:none; color:var(--primary); font-weight:700; cursor:pointer;">Cerrar</button>
-                </div>
-            `;
-        }
-
-        function finishPremature() {
-            document.getElementById('prog-ui').classList.add('hidden');
-            document.getElementById('footer-ui').classList.add('hidden');
-            document.getElementById('main-content').innerHTML = `<div style="text-align:center; padding-top:100px; color:#94a3b8;"><p>Gracias por tu interés. Buscamos un perfil específico por ahora.</p><button onclick="location.reload()">Regresar</button></div>`;
-        }
-
-        // --- SISTEMA ADMIN (5 clicks en el logo) ---
-        document.getElementById('header-admin-trigger').onclick = () => {
-            adminClickCount++;
-            if (adminClickCount >= 5) {
-                const pass = prompt("Contraseña Admin:");
-                if (pass === "XIGO2026") showAdmin();
-                adminClickCount = 0;
-            }
-        };
-
-        async function showAdmin() {
-            const main = document.getElementById('main-content');
-            document.getElementById('prog-ui').classList.add('hidden');
-            main.innerHTML = "<h4>Cargando base de datos...</h4>";
-            
-            if (!db) { main.innerHTML = "Error: Base de datos no conectada."; return; }
-
-            try {
-                const snap = await db.collection('artifacts').doc(appId).collection('public').doc('data').collection('responses').get();
-                let html = `<h4>Respuestas (${snap.size})</h4>`;
-                snap.forEach(doc => {
-                    const d = doc.data();
-                    html += `<div class="admin-card"><b>${d.email}</b><br><small>${new Date(d.date).toLocaleString()}</small></div>`;
-                });
-                html += `<button onclick="location.reload()" class="next-btn" style="display:block">Cerrar</button>`;
-                main.innerHTML = html;
-            } catch (e) { main.innerHTML = "Error al leer datos."; }
-        }
-
-        window.onload = startApp;
-    </script>
 </body>
 </html>
